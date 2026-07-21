@@ -56,6 +56,10 @@ class JovimRepository(
         userDao.insertUser(user)
     }
 
+    suspend fun updateUser(user: User) = withContext(Dispatchers.IO) {
+        userDao.updateUser(user)
+    }
+
     suspend fun updatePassword(email: String, newHash: String) = withContext(Dispatchers.IO) {
         userDao.updatePassword(email, newHash)
     }
@@ -128,12 +132,12 @@ class JovimRepository(
         if (currentAccounts.isEmpty()) {
             // Add default accounts
             listOf(
-                Account(platformName = "Facebook", accountName = "JO Social Hub Page", isConnected = true, followerCount = 12450, status = "Connected"),
-                Account(platformName = "Instagram", accountName = "@jo_social", isConnected = true, followerCount = 8200, status = "Connected"),
-                Account(platformName = "TikTok", accountName = "@jo_social_hub", isConnected = false, followerCount = 0, status = "Disconnected"),
-                Account(platformName = "YouTube", accountName = "JO Hub Channel", isConnected = true, followerCount = 3400, status = "Connected"),
-                Account(platformName = "LinkedIn", accountName = "JO Corp", isConnected = true, followerCount = 1540, status = "Connected"),
-                Account(platformName = "X (Twitter)", accountName = "@JoSocial", isConnected = false, followerCount = 0, status = "Disconnected")
+                Account(platformName = "Facebook", accountName = "JO Social Hub Page", isConnected = true, followerCount = 12450, status = "Connected", isProfessional = true),
+                Account(platformName = "Instagram", accountName = "@ir_jospin_kanani_christoph", isConnected = true, followerCount = 8200, status = "Connected", isProfessional = true),
+                Account(platformName = "TikTok", accountName = "@jo_social_hub", isConnected = false, followerCount = 0, status = "Disconnected", isProfessional = true),
+                Account(platformName = "YouTube", accountName = "JO Hub Channel", isConnected = true, followerCount = 3400, status = "Connected", isProfessional = true),
+                Account(platformName = "LinkedIn", accountName = "JO Corp", isConnected = true, followerCount = 1540, status = "Connected", isProfessional = true),
+                Account(platformName = "X (Twitter)", accountName = "@JoSocial", isConnected = false, followerCount = 0, status = "Disconnected", isProfessional = true)
             ).forEach { accountDao.insertAccount(it) }
         }
 
@@ -197,7 +201,8 @@ class JovimRepository(
                     email = "jospin.kanani",
                     passwordHash = PasswordHasher.hashPassword("chrisjospin2003@@"),
                     role = "Administrateur",
-                    isGoogleConnected = false
+                    isGoogleConnected = false,
+                    isEmailVerified = true
                 )
             )
         }

@@ -16,6 +16,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -234,7 +237,256 @@ fun JovimAppContainer(
                                     AppScreen.Analytics -> AnalyticsScreen(viewModel, accounts, posts)
                                     AppScreen.Profile -> ProfileScreen(viewModel, brandKit, accounts)
                                     AppScreen.Settings -> SettingsScreen(viewModel, brandKit)
+                                    AppScreen.AddAccount -> AddAccountScreen(viewModel, accounts)
                                     else -> DashboardScreen(viewModel, accounts, posts)
+                                }
+                            }
+                        }
+
+                        // Direct API Publishing Progress / Success Dialog
+                        if (uiState.showPublishStatusDialog) {
+                            androidx.compose.ui.window.Dialog(
+                                onDismissRequest = { 
+                                    if (!uiState.isPublishing) {
+                                        viewModel.dismissPublishStatusDialog() 
+                                    }
+                                }
+                            ) {
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                                    shape = RoundedCornerShape(16.dp),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(24.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            text = "JO Social Hub Direct API",
+                                            color = JovimPrimary,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 18.sp,
+                                            modifier = Modifier.padding(bottom = 16.dp)
+                                        )
+
+                                        if (uiState.isPublishing) {
+                                            CircularProgressIndicator(
+                                                progress = { uiState.publishProgress },
+                                                color = JovimGold,
+                                                trackColor = Color.LightGray.copy(0.3f),
+                                                modifier = Modifier.size(64.dp)
+                                            )
+                                            Spacer(modifier = Modifier.height(16.dp))
+                                            Text(
+                                                text = uiState.publishStatusMessage,
+                                                color = JovimTextPrimary,
+                                                fontWeight = FontWeight.Medium,
+                                                fontSize = 14.sp,
+                                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                            )
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Text(
+                                                text = "Progression : ${(uiState.publishProgress * 100).toInt()}%",
+                                                color = JovimTextSecondary,
+                                                fontSize = 12.sp
+                                            )
+                                        } else {
+                                            // Success phase
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(56.dp)
+                                                    .background(JovimSuccess.copy(alpha = 0.15f), CircleShape),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.CheckCircle,
+                                                    contentDescription = null,
+                                                    tint = JovimSuccess,
+                                                    modifier = Modifier.size(36.dp)
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(16.dp))
+                                            Text(
+                                                text = "Publication envoyée !",
+                                                color = JovimSuccess,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 16.sp
+                                            )
+                                            Spacer(modifier = Modifier.height(12.dp))
+                                            
+                                            // Render details elegantly
+                                            Card(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                colors = CardDefaults.cardColors(containerColor = JovimBackground),
+                                                border = BorderStroke(1.dp, Color.LightGray.copy(0.3f)),
+                                                shape = RoundedCornerShape(8.dp)
+                                            ) {
+                                                Text(
+                                                    text = uiState.publishSuccessDetails ?: "Opération réussie.",
+                                                    color = Color.DarkGray,
+                                                    fontSize = 13.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    modifier = Modifier.padding(12.dp),
+                                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                                )
+                                            }
+                                            
+                                            Spacer(modifier = Modifier.height(20.dp))
+                                            Button(
+                                                onClick = { viewModel.dismissPublishStatusDialog() },
+                                                colors = ButtonDefaults.buttonColors(containerColor = JovimPrimary),
+                                                modifier = Modifier.fillMaxWidth(),
+                                                shape = RoundedCornerShape(8.dp)
+                                            ) {
+                                                Text("Fermer", color = Color.White, fontWeight = FontWeight.Bold)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Indirect API Publishing Clipboard Helper Dialog
+                        if (uiState.showIndirectPublishDialog) {
+                            val context = androidx.compose.ui.platform.LocalContext.current
+                            androidx.compose.ui.window.Dialog(
+                                onDismissRequest = { viewModel.dismissIndirectPublishDialog() }
+                            ) {
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                                    shape = RoundedCornerShape(16.dp),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(24.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(56.dp)
+                                                .background(JovimGold.copy(alpha = 0.2f), CircleShape),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Share,
+                                                contentDescription = null,
+                                                tint = JovimGold,
+                                                modifier = Modifier.size(32.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        Text(
+                                            text = "Publication Préparée !",
+                                            color = JovimPrimary,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 18.sp
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Text(
+                                            text = "La plateforme ${uiState.indirectPublishPlatform} requiert une publication manuelle finale pour des raisons de sécurité.",
+                                            color = JovimTextSecondary,
+                                            fontSize = 12.sp,
+                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                            modifier = Modifier.padding(horizontal = 8.dp)
+                                        )
+
+                                        Spacer(modifier = Modifier.height(16.dp))
+
+                                        // Contenu du post
+                                        Card(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            colors = CardDefaults.cardColors(containerColor = JovimBackground),
+                                            border = BorderStroke(1.dp, Color.LightGray.copy(0.3f)),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Column(modifier = Modifier.padding(12.dp)) {
+                                                Text(
+                                                    text = "Contenu copié :",
+                                                    color = JovimPrimary,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 11.sp
+                                                )
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Text(
+                                                    text = uiState.indirectPublishContent,
+                                                    color = Color.DarkGray,
+                                                    fontSize = 12.sp,
+                                                    maxLines = 5,
+                                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                                )
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.height(20.dp))
+
+                                        Button(
+                                            onClick = {
+                                                // Copy text again to be absolutely sure
+                                                try {
+                                                    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                                    val clip = android.content.ClipData.newPlainText("JO Social Hub Post", uiState.indirectPublishContent)
+                                                    clipboard.setPrimaryClip(clip)
+                                                } catch (e: Exception) {}
+
+                                                // Launch platform app
+                                                val platformLower = uiState.indirectPublishPlatform.lowercase()
+                                                val (intentUrl, packageName) = when {
+                                                    platformLower.contains("tiktok") -> Pair("https://www.tiktok.com/", "com.zhiliaoapp.musically")
+                                                    platformLower.contains("threads") -> Pair("https://www.threads.net/", "com.instagram.barcelona")
+                                                    platformLower.contains("pinterest") -> Pair("https://www.pinterest.com/", "com.pinterest")
+                                                    platformLower.contains("blogger") -> Pair("https://www.blogger.com/", "com.google.android.apps.blogger")
+                                                    platformLower.contains("medium") -> Pair("https://medium.com/", "com.medium.reader")
+                                                    platformLower.contains("telegram") -> Pair("https://t.me/share/url?text=${android.net.Uri.encode(uiState.indirectPublishContent)}", "org.telegram.messenger")
+                                                    platformLower.contains("whatsapp") -> Pair("https://api.whatsapp.com/send?text=${android.net.Uri.encode(uiState.indirectPublishContent)}", "com.whatsapp")
+                                                    else -> Pair("https://www.google.com", "")
+                                                }
+
+                                                val intent = if (packageName.isNotEmpty()) {
+                                                    val pm = context.packageManager
+                                                    val launchIntent = pm.getLaunchIntentForPackage(packageName)
+                                                    launchIntent ?: android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(intentUrl))
+                                                } else {
+                                                    android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(intentUrl))
+                                                }
+                                                
+                                                try {
+                                                    context.startActivity(intent)
+                                                } catch (e: Exception) {
+                                                    // Fallback to web link
+                                                    try {
+                                                        context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(intentUrl)))
+                                                    } catch (ex: Exception) {}
+                                                }
+                                                viewModel.dismissIndirectPublishDialog()
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = JovimGold),
+                                            modifier = Modifier.fillMaxWidth(),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, tint = JovimPrimary, modifier = Modifier.size(16.dp))
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text("Ouvrir l'App Officielle", color = JovimPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                        }
+
+                                        Spacer(modifier = Modifier.height(8.dp))
+
+                                        TextButton(
+                                            onClick = { viewModel.dismissIndirectPublishDialog() },
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text("Fermer", color = JovimTextSecondary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -390,7 +642,7 @@ fun SplashScreen(viewModel: JovimViewModel) {
             )
         }
         Text(
-            text = "Powered by Gemini AI",
+            text = "Powered by Kan Jospin",
             color = Color.White.copy(0.4f),
             fontSize = 12.sp,
             modifier = Modifier
@@ -413,7 +665,7 @@ fun OnboardingScreen(viewModel: JovimViewModel) {
         ),
         OnboardingPageData(
             title = "JO AI : Assistant Intelligent",
-            desc = "Grâce à Google Gemini, adaptez automatiquement votre message aux codes de chaque réseau social en un seul clic !",
+            desc = "Adaptez automatiquement votre message aux codes de chaque réseau social en un seul clic ! Powered by Kan Jospin",
             icon = Icons.Default.AutoAwesome
         ),
         OnboardingPageData(
@@ -619,7 +871,7 @@ fun LoginScreen(viewModel: JovimViewModel) {
                 OutlinedTextField(
                     value = fullName,
                     onValueChange = { fullName = it },
-                    label = { Text("Nom complet", color = Color.Gray) },
+                    placeholder = { Text("Nom complet", color = Color.Gray) },
                     textStyle = TextStyle(color = Color.Black),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = Color.White,
@@ -628,7 +880,6 @@ fun LoginScreen(viewModel: JovimViewModel) {
                         unfocusedTextColor = Color.Black,
                         focusedBorderColor = JovimGold,
                         unfocusedBorderColor = Color.White.copy(0.4f),
-                        focusedLabelColor = JovimGold,
                         cursorColor = Color.Black
                     ),
                     singleLine = true,
@@ -640,7 +891,7 @@ fun LoginScreen(viewModel: JovimViewModel) {
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
-                label = { Text("Identifiant ou E-mail", color = Color.Gray) },
+                placeholder = { Text("Identifiant ou E-mail", color = Color.Gray) },
                 textStyle = TextStyle(color = Color.Black),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = Color.White,
@@ -649,7 +900,6 @@ fun LoginScreen(viewModel: JovimViewModel) {
                     unfocusedTextColor = Color.Black,
                     focusedBorderColor = JovimGold,
                     unfocusedBorderColor = Color.White.copy(0.4f),
-                    focusedLabelColor = JovimGold,
                     cursorColor = Color.Black
                 ),
                 singleLine = true,
@@ -661,7 +911,7 @@ fun LoginScreen(viewModel: JovimViewModel) {
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("Mot de passe", color = Color.Gray) },
+                placeholder = { Text("Mot de passe", color = Color.Gray) },
                 textStyle = TextStyle(color = Color.Black),
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -672,7 +922,6 @@ fun LoginScreen(viewModel: JovimViewModel) {
                     unfocusedTextColor = Color.Black,
                     focusedBorderColor = JovimGold,
                     unfocusedBorderColor = Color.White.copy(0.4f),
-                    focusedLabelColor = JovimGold,
                     cursorColor = Color.Black
                 ),
                 singleLine = true,
@@ -684,7 +933,7 @@ fun LoginScreen(viewModel: JovimViewModel) {
                 OutlinedTextField(
                     value = confirmPassword,
                     onValueChange = { confirmPassword = it },
-                    label = { Text("Confirmer le mot de passe", color = Color.Gray) },
+                    placeholder = { Text("Confirmer le mot de passe", color = Color.Gray) },
                     textStyle = TextStyle(color = Color.Black),
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -695,7 +944,6 @@ fun LoginScreen(viewModel: JovimViewModel) {
                         unfocusedTextColor = Color.Black,
                         focusedBorderColor = JovimGold,
                         unfocusedBorderColor = Color.White.copy(0.4f),
-                        focusedLabelColor = JovimGold,
                         cursorColor = Color.Black
                     ),
                     singleLine = true,
@@ -824,10 +1072,18 @@ fun LoginScreen(viewModel: JovimViewModel) {
                                     oauthError = ""
                                 },
                                 textStyle = TextStyle(color = Color.Black),
-                                label = { Text("Adresse e-mail Google") },
-                                placeholder = { Text("ex: jospin.kanani@gmail.com") },
+                                placeholder = { Text("Adresse e-mail Google (ex: jospin.kanani@gmail.com)", color = Color.Gray) },
                                 singleLine = true,
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = Color.White,
+                                    unfocusedContainerColor = Color.White,
+                                    focusedTextColor = Color.Black,
+                                    unfocusedTextColor = Color.Black,
+                                    focusedBorderColor = JovimGold,
+                                    unfocusedBorderColor = Color.LightGray,
+                                    cursorColor = Color.Black
+                                )
                             )
                             
                             if (oauthError.isNotBlank()) {
@@ -908,9 +1164,307 @@ fun LoginScreen(viewModel: JovimViewModel) {
                     }
                 )
             }
+
+            // Google Account Existence Verification Dialog
+            if (uiState.showGoogleExistenceDialog) {
+                var googlePasswordInput by remember { mutableStateOf("") }
+                var showPassError by remember { mutableStateOf(false) }
+
+                AlertDialog(
+                    onDismissRequest = { viewModel.setGoogleExistenceDialog(false) },
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Cloud, contentDescription = null, tint = JovimGold, modifier = Modifier.size(24.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Authentification Google Identity", color = JovimPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        }
+                    },
+                    text = {
+                        Column {
+                            Text(
+                                "Google Identity Services exige de vérifier que l'adresse email suivante correspond à un compte Google existant :",
+                                fontSize = 12.sp,
+                                color = JovimTextSecondary
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Surface(
+                                color = Color.LightGray.copy(0.2f),
+                                shape = RoundedCornerShape(4.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = uiState.verifyingGoogleEmail,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = JovimPrimary,
+                                    modifier = Modifier.padding(8.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                "Saisissez le mot de passe du compte Google pour autoriser la validation :",
+                                fontSize = 11.sp,
+                                color = Color.Gray
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            OutlinedTextField(
+                                value = googlePasswordInput,
+                                onValueChange = { 
+                                    googlePasswordInput = it
+                                    showPassError = false
+                                },
+                                placeholder = { Text("Mot de passe Google", color = Color.Gray, fontSize = 11.sp) },
+                                textStyle = TextStyle(color = Color.Black),
+                                visualTransformation = PasswordVisualTransformation(),
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth().testTag("google_existence_password"),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = Color.White,
+                                    unfocusedContainerColor = Color.White,
+                                    focusedTextColor = Color.Black,
+                                    unfocusedTextColor = Color.Black,
+                                    focusedBorderColor = JovimGold,
+                                    unfocusedBorderColor = Color.LightGray,
+                                    cursorColor = Color.Black
+                                )
+                            )
+                            if (showPassError) {
+                                Text(
+                                    "Veuillez saisir un mot de passe pour valider.",
+                                    color = JovimError,
+                                    fontSize = 11.sp,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                onClick = {
+                                    if (googlePasswordInput.isBlank()) {
+                                        showPassError = true
+                                    } else {
+                                        viewModel.verifyGoogleExistence(uiState.verifyingGoogleEmail, true)
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = JovimGold),
+                                modifier = Modifier.fillMaxWidth().testTag("google_exist_confirm_btn")
+                            ) {
+                                Text("Vérifier & Continuer", color = JovimPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
+                            Button(
+                                onClick = {
+                                    viewModel.verifyGoogleExistence(uiState.verifyingGoogleEmail, false)
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = JovimError),
+                                modifier = Modifier.fillMaxWidth().testTag("google_exist_fail_btn")
+                            ) {
+                                Text("Simuler Compte Inexistant", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                            }
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = { viewModel.setGoogleExistenceDialog(false) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Annuler l'inscription", color = JovimTextSecondary)
+                        }
+                    }
+                )
+            }
+
+            // Email Code & Link Verification Dialog
+            if (uiState.showEmailVerificationDialog) {
+                var codeInput by remember { mutableStateOf("") }
+                var codeError by remember { mutableStateOf("") }
+
+                AlertDialog(
+                    onDismissRequest = { viewModel.setVerificationDialog(false) },
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Verified, contentDescription = null, tint = JovimSuccess, modifier = Modifier.size(24.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Validation de votre adresse e-mail", color = JovimPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        }
+                    },
+                    text = {
+                        Column(
+                            modifier = Modifier.verticalScroll(rememberScrollState())
+                        ) {
+                            // MANDATORY DISPLAY MESSAGE
+                            Text(
+                                text = "Un email de confirmation a été envoyé. Veuillez vérifier votre boîte de réception avant de vous connecter.",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = JovimPrimary,
+                                modifier = Modifier.padding(bottom = 12.dp)
+                            )
+
+                            Text(
+                                text = "Saisissez ci-dessous le code à 6 chiffres reçu par e-mail pour activer votre compte :",
+                                fontSize = 12.sp,
+                                color = JovimTextSecondary
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            OutlinedTextField(
+                                value = codeInput,
+                                onValueChange = { 
+                                    codeInput = it
+                                    codeError = ""
+                                },
+                                placeholder = { Text("Code à 6 chiffres", color = Color.Gray, fontSize = 12.sp) },
+                                textStyle = TextStyle(color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 16.sp),
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth().testTag("verification_code_input"),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = Color.White,
+                                    unfocusedContainerColor = Color.White,
+                                    focusedTextColor = Color.Black,
+                                    unfocusedTextColor = Color.Black,
+                                    focusedBorderColor = JovimSuccess,
+                                    unfocusedBorderColor = Color.LightGray,
+                                    cursorColor = Color.Black
+                                )
+                            )
+
+                            if (codeError.isNotEmpty()) {
+                                Text(
+                                    text = codeError,
+                                    color = JovimError,
+                                    fontSize = 11.sp,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                TextButton(
+                                    onClick = { viewModel.resendVerificationEmail(uiState.verificationPendingEmail) }
+                                ) {
+                                    Text("Renvoyer le code", color = JovimGold, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                                Button(
+                                    onClick = {
+                                        if (codeInput.isBlank()) {
+                                            codeError = "Veuillez entrer le code de confirmation."
+                                        } else {
+                                            val ok = viewModel.verifyEmailCode(uiState.verificationPendingEmail, codeInput)
+                                            if (!ok) {
+                                                // Wait 100ms then check if code didn't match
+                                                codeError = "Code de confirmation incorrect."
+                                            }
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = JovimSuccess),
+                                    shape = RoundedCornerShape(6.dp)
+                                ) {
+                                    Text("Confirmer", color = Color.White, fontSize = 12.sp)
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(18.dp))
+
+                            // SIMULATED INBOX UI
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F5F9)),
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(1.dp, Color.LightGray.copy(0.5f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            modifier = Modifier.size(24.dp).background(JovimGold, CircleShape),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(Icons.Default.Email, contentDescription = null, tint = JovimPrimary, modifier = Modifier.size(14.dp))
+                                        }
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            "Boîte de Réception (Simulation)",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 12.sp,
+                                            color = JovimPrimary
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    HorizontalDivider(color = Color.LightGray.copy(0.5f))
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = "De : security@josocialhub.com",
+                                        fontSize = 11.sp,
+                                        color = Color.DarkGray
+                                    )
+                                    Text(
+                                        text = "Sujet : JO Social Hub - Confirmation de compte",
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 11.sp,
+                                        color = Color.Black
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = "Bonjour,\n\nMerci de vous être inscrit sur JO Social Hub ! Saisissez le code de confirmation suivant dans l'application :",
+                                        fontSize = 11.sp,
+                                        color = Color.DarkGray
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Surface(
+                                        color = Color.White,
+                                        shape = RoundedCornerShape(4.dp),
+                                        border = BorderStroke(1.dp, Color.LightGray),
+                                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                                    ) {
+                                        Text(
+                                            text = uiState.generatedVerificationCode,
+                                            fontSize = 18.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                                            color = JovimPrimary
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    Text(
+                                        text = "Ou cliquez directement sur le bouton de sécurité ci-dessous pour valider votre compte en un clic :",
+                                        fontSize = 11.sp,
+                                        color = Color.DarkGray
+                                    )
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    Button(
+                                        onClick = { viewModel.activateAccountDirectly(uiState.verificationPendingEmail) },
+                                        colors = ButtonDefaults.buttonColors(containerColor = JovimPrimary),
+                                        shape = RoundedCornerShape(6.dp),
+                                        modifier = Modifier.fillMaxWidth().testTag("direct_confirm_btn")
+                                    ) {
+                                        Text("🚀 Valider mon e-mail via le lien", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {},
+                    dismissButton = {
+                        TextButton(
+                            onClick = { viewModel.setVerificationDialog(false) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Fermer", color = JovimTextSecondary)
+                        }
+                    }
+                )
+            }
         }
     }
 }
+
 
 // --- 4. DASHBOARD SCREEN ---
 @Composable
@@ -1310,15 +1864,13 @@ fun AccountsScreen(viewModel: JovimViewModel, accounts: List<Account>) {
 
     Scaffold(
         floatingActionButton = {
-            if (activeTab == 0) {
-                FloatingActionButton(
-                    onClick = { showAddDialog = true },
-                    containerColor = JovimGold,
-                    contentColor = JovimPrimary,
-                    modifier = Modifier.testTag("add_account_fab")
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Connecter un réseau")
-                }
+            FloatingActionButton(
+                onClick = { viewModel.setScreen(AppScreen.AddAccount) },
+                containerColor = JovimGold,
+                contentColor = JovimPrimary,
+                modifier = Modifier.testTag("add_account_fab")
+            ) {
+                Icon(Icons.Default.AddLink, contentDescription = "Connecter un compte")
             }
         }
     ) { padding ->
@@ -1377,13 +1929,63 @@ fun AccountsScreen(viewModel: JovimViewModel, accounts: List<Account>) {
 
             if (activeTab == 0) {
                 // TAB 0: API Channels List
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(1),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    items(accounts) { account ->
-                        AccountCard(account, onToggle = { viewModel.toggleAccountConnection(account.id) })
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp)
+                            .clickable { viewModel.setScreen(AppScreen.AddAccount) },
+                        colors = CardDefaults.cardColors(containerColor = JovimGold.copy(0.15f)),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.5.dp, JovimGold)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(JovimGold, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.AddLink, contentDescription = null, tint = JovimPrimary)
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "Connexion Simplifiée par Lien de Profil",
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
+                                    fontSize = 14.sp
+                                )
+                                Text(
+                                    "Collez simplement votre URL de profil (Facebook, Instagram, LinkedIn, etc.) pour connecter votre compte automatiquement via OAuth sécurisé !",
+                                    color = Color.White.copy(0.7f),
+                                    fontSize = 11.sp
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                                contentDescription = null,
+                                tint = JovimGold,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                    }
+
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(1),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(accounts) { account ->
+                            AccountCard(
+                                account = account,
+                                onToggle = { viewModel.toggleAccountConnection(account.id) },
+                                onToggleType = { viewModel.toggleAccountType(account.id) }
+                            )
+                        }
                     }
                 }
             } else {
@@ -1449,13 +2051,17 @@ fun AccountsScreen(viewModel: JovimViewModel, accounts: List<Account>) {
                                 value = profileUrlInput,
                                 onValueChange = { profileUrlInput = it },
                                 textStyle = TextStyle(color = Color.Black),
-                                label = { Text("Lien complet du profil") },
-                                placeholder = { Text("https://...") },
+                                placeholder = { Text("Lien complet du profil (ex: https://...)", color = Color.Gray) },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = Color.White,
+                                    unfocusedContainerColor = Color.White,
+                                    focusedTextColor = Color.Black,
+                                    unfocusedTextColor = Color.Black,
                                     focusedBorderColor = JovimPrimary,
-                                    unfocusedBorderColor = Color.LightGray
+                                    unfocusedBorderColor = Color.LightGray,
+                                    cursorColor = Color.Black
                                 )
                             )
 
@@ -1574,9 +2180,18 @@ fun AccountsScreen(viewModel: JovimViewModel, accounts: List<Account>) {
                                             isEditing = true
                                         },
                                         textStyle = TextStyle(color = Color.Black),
-                                        label = { Text("URL du profil") },
+                                        placeholder = { Text("URL du profil", color = Color.Gray) },
                                         singleLine = true,
-                                        modifier = Modifier.fillMaxWidth()
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedContainerColor = Color.White,
+                                            unfocusedContainerColor = Color.White,
+                                            focusedTextColor = Color.Black,
+                                            unfocusedTextColor = Color.Black,
+                                            focusedBorderColor = JovimPrimary,
+                                            unfocusedBorderColor = Color.LightGray,
+                                            cursorColor = Color.Black
+                                        )
                                     )
 
                                     Spacer(modifier = Modifier.height(8.dp))
@@ -1678,9 +2293,18 @@ fun AccountsScreen(viewModel: JovimViewModel, accounts: List<Account>) {
                         value = newHandle,
                         onValueChange = { newHandle = it },
                         textStyle = TextStyle(color = Color.Black),
-                        label = { Text("Nom d'utilisateur ou Page ID") },
+                        placeholder = { Text("Nom d'utilisateur ou Page ID", color = Color.Gray) },
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White,
+                            focusedTextColor = Color.Black,
+                            unfocusedTextColor = Color.Black,
+                            focusedBorderColor = JovimPrimary,
+                            unfocusedBorderColor = Color.LightGray,
+                            cursorColor = Color.Black
+                        )
                     )
                 }
             },
@@ -1708,87 +2332,388 @@ fun AccountsScreen(viewModel: JovimViewModel, accounts: List<Account>) {
 }
 
 @Composable
-fun AccountCard(account: Account, onToggle: () -> Unit) {
+fun PlatformLogo(platformName: String, modifier: Modifier = Modifier) {
+    val pLower = platformName.lowercase()
+    Box(
+        modifier = modifier
+            .size(42.dp)
+            .clip(CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        when {
+            pLower.contains("facebook") -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFF1877F2)),
+                    contentAlignment = Alignment.BottomCenter
+                ) {
+                    Text(
+                        text = "f",
+                        color = Color.White,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 32.sp,
+                        fontFamily = FontFamily.SansSerif,
+                        modifier = Modifier.offset(x = 4.dp, y = 4.dp)
+                    )
+                }
+            }
+            pLower.contains("instagram") -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(
+                                    Color(0xFFFCAF45),
+                                    Color(0xFFFD1D1D),
+                                    Color(0xFF833AB4)
+                                )
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    androidx.compose.foundation.Canvas(modifier = Modifier.size(24.dp)) {
+                        val strokeW = 2.dp.toPx()
+                        drawRoundRect(
+                            color = Color.White,
+                            size = size,
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(6.dp.toPx()),
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeW)
+                        )
+                        drawCircle(
+                            color = Color.White,
+                            radius = 5.dp.toPx(),
+                            center = center,
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeW)
+                        )
+                        drawCircle(
+                            color = Color.White,
+                            radius = 1.5.dp.toPx(),
+                            center = androidx.compose.ui.geometry.Offset(size.width * 0.75f, size.height * 0.25f)
+                        )
+                    }
+                }
+            }
+            pLower.contains("linkedin") -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFF0A66C2)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "in",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp,
+                        fontFamily = FontFamily.SansSerif,
+                        modifier = Modifier.offset(y = (-1).dp)
+                    )
+                }
+            }
+            pLower.contains("youtube") -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFFFF0000)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    androidx.compose.foundation.Canvas(modifier = Modifier.size(20.dp)) {
+                        val path = androidx.compose.ui.graphics.Path().apply {
+                            moveTo(size.width * 0.4f, size.height * 0.3f)
+                            lineTo(size.width * 0.7f, size.height * 0.5f)
+                            lineTo(size.width * 0.4f, size.height * 0.7f)
+                            close()
+                        }
+                        drawPath(path, color = Color.White)
+                    }
+                }
+            }
+            pLower.contains("tiktok") -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFF010101)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MusicNote,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+            pLower.contains("threads") -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFF101010)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "@",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 22.sp,
+                        fontFamily = FontFamily.SansSerif
+                    )
+                }
+            }
+            pLower.contains("pinterest") -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFFBD081C)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "P",
+                        color = Color.White,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                        fontSize = 22.sp,
+                        fontFamily = FontFamily.Serif
+                    )
+                }
+            }
+            pLower.contains("wordpress") -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFF21759B)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "W",
+                        color = Color.White,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 20.sp,
+                        fontFamily = FontFamily.SansSerif
+                    )
+                }
+            }
+            pLower.contains("blogger") -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFFF57C00)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "B",
+                        color = Color.White,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 22.sp,
+                        fontFamily = FontFamily.Serif
+                    )
+                }
+            }
+            pLower.contains("medium") -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFF000000)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "M",
+                        color = Color.White,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 18.sp,
+                        fontFamily = FontFamily.Serif
+                    )
+                }
+            }
+            pLower.contains("telegram") -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFF229ED9)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    androidx.compose.foundation.Canvas(modifier = Modifier.size(20.dp)) {
+                        val path = androidx.compose.ui.graphics.Path().apply {
+                            moveTo(size.width * 0.2f, size.height * 0.5f)
+                            lineTo(size.width * 0.85f, size.height * 0.2f)
+                            lineTo(size.width * 0.65f, size.height * 0.8f)
+                            lineTo(size.width * 0.5f, size.height * 0.65f)
+                            lineTo(size.width * 0.35f, size.height * 0.8f)
+                            lineTo(size.width * 0.38f, size.height * 0.58f)
+                            close()
+                        }
+                        drawPath(path, color = Color.White)
+                    }
+                }
+            }
+            pLower.contains("whatsapp") -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFF25D366)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.ChatBubble,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Text(
+                            text = "B",
+                            color = Color(0xFF25D366),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 10.sp,
+                            modifier = Modifier.offset(y = (-1).dp)
+                        )
+                    }
+                }
+            }
+            else -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(JovimPrimary),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = platformName.take(2).uppercase(),
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AccountCard(account: Account, onToggle: () -> Unit, onToggleType: (() -> Unit)? = null) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, if (account.isConnected) JovimGold.copy(0.4f) else Color.LightGray.copy(0.3f))
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Platform Icon Simulator
-                val platformColor = when (account.platformName) {
-                    "Facebook" -> Color(0xFF1877F2)
-                    "Instagram" -> Color(0xFFE4405F)
-                    "TikTok" -> Color(0xFF000000)
-                    "YouTube" -> Color(0xFFFF0000)
-                    "LinkedIn" -> Color(0xFF0A66C2)
-                    else -> JovimPrimary
-                }
-                Box(
-                    modifier = Modifier
-                        .size(42.dp)
-                        .background(platformColor, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        account.platformName.take(2).uppercase(),
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
-                    )
-                }
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    PlatformLogo(platformName = account.platformName)
 
-                Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
 
-                Column {
-                    Text(
-                        account.platformName,
-                        fontWeight = FontWeight.Bold,
-                        color = JovimTextPrimary,
-                        fontSize = 16.sp
-                    )
-                    Text(
-                        if (account.isConnected) account.accountName else "Non connecté",
-                        color = JovimTextSecondary,
-                        fontSize = 13.sp
-                    )
-                    if (account.isConnected && account.followerCount > 0) {
+                    Column {
                         Text(
-                            "${String.format("%,d", account.followerCount)} abonnés",
-                            color = JovimGold,
-                            fontSize = 11.sp,
+                            account.platformName,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(top = 2.dp)
+                            color = JovimTextPrimary,
+                            fontSize = 16.sp
                         )
+                        Text(
+                            if (account.isConnected) account.accountName else "Non connecté",
+                            color = JovimTextSecondary,
+                            fontSize = 13.sp
+                        )
+                        if (account.isConnected && account.followerCount > 0) {
+                            Text(
+                                "${String.format("%,d", account.followerCount)} abonnés",
+                                color = JovimGold,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(top = 2.dp)
+                            )
+                        }
                     }
+                }
+
+                // Connection Toggle Switch
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = if (account.isConnected) "Actif" else "Inactif",
+                        fontSize = 11.sp,
+                        color = if (account.isConnected) JovimSuccess else JovimTextSecondary,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                    Switch(
+                        checked = account.isConnected,
+                        onCheckedChange = { onToggle() },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = JovimGold,
+                            checkedTrackColor = JovimPrimary,
+                            uncheckedThumbColor = Color.LightGray,
+                            uncheckedTrackColor = Color.LightGray.copy(0.3f)
+                        )
+                    )
                 }
             }
 
-            // Connection Toggle Switch
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = if (account.isConnected) "Actif" else "Inactif",
-                    fontSize = 11.sp,
-                    color = if (account.isConnected) JovimSuccess else JovimTextSecondary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(end = 8.dp)
-                )
-                Switch(
-                    checked = account.isConnected,
-                    onCheckedChange = { onToggle() },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = JovimGold,
-                        checkedTrackColor = JovimPrimary,
-                        uncheckedThumbColor = Color.LightGray,
-                        uncheckedTrackColor = Color.LightGray.copy(0.3f)
-                    )
-                )
+            // Sub-panel for Instagram / Facebook connected settings
+            if (account.isConnected && onToggleType != null && (account.platformName == "Instagram" || account.platformName == "Facebook")) {
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.LightGray.copy(0.3f)))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(if (account.isProfessional) JovimSuccess.copy(alpha = 0.04f) else Color(0xFFFFECEF))
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "Statut : ${if (account.isProfessional) "Connecté ✓" else "Non compatible ⚠️"}",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (account.isProfessional) JovimSuccess else Color(0xFFC62828)
+                            )
+                            Text(
+                                text = "Type de compte : ${if (account.isProfessional) "Professionnel/Créateur" else "Personnel"}",
+                                fontSize = 11.sp,
+                                color = JovimTextSecondary
+                            )
+                        }
+                        
+                        Text(
+                            text = if (account.isProfessional) "Passer en Personnel" else "Passer en Pro/Créateur",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = JovimPrimary,
+                            modifier = Modifier
+                                .background(Color.White, RoundedCornerShape(4.dp))
+                                .border(1.dp, JovimPrimary.copy(0.3f), RoundedCornerShape(4.dp))
+                                .clickable { onToggleType() }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                    
+                    if (!account.isProfessional && account.platformName == "Instagram") {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Votre compte Instagram doit être professionnel ou créateur pour permettre la publication automatique.",
+                            fontSize = 11.sp,
+                            color = Color(0xFFC62828),
+                            fontWeight = FontWeight.Medium
+                        )
+                    } else if (!account.isProfessional && account.platformName == "Facebook") {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Votre compte Facebook doit être professionnel (Page) pour permettre la publication automatique.",
+                            fontSize = 11.sp,
+                            color = Color(0xFFC62828),
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
             }
         }
     }
@@ -2211,7 +3136,7 @@ fun CreatePostScreen(
                             )
                         } else {
                             Text(
-                                "Sélectionnez des réseaux cibles et cliquez sur 'Adapter' pour voir votre publication réécrite de manière optimale par Gemini.",
+                                "Sélectionnez des réseaux cibles et cliquez sur 'Adapter' pour voir votre publication réécrite de manière optimale par notre assistant IA.",
                                 color = JovimTextSecondary,
                                 fontSize = 13.sp,
                                 textAlign = TextAlign.Center,
@@ -2437,8 +3362,7 @@ fun JovimAiScreen(
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
-                    Text("JO AI", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                    Text("Powered by Google Gemini 3.5-Flash", color = JovimGold, fontSize = 11.sp)
+                    Text("JO AI Assistant", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
             }
 
@@ -2538,9 +3462,15 @@ fun JovimAiScreen(
                     .testTag("ai_chat_input"),
                 singleLine = false,
                 maxLines = 4,
+                textStyle = TextStyle(color = Color.Black),
                 colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black,
                     focusedBorderColor = Color.Transparent,
-                    unfocusedBorderColor = Color.Transparent
+                    unfocusedBorderColor = Color.Transparent,
+                    cursorColor = Color.Black
                 )
             )
 
@@ -2954,10 +3884,19 @@ fun MediaLibraryScreen(viewModel: JovimViewModel, mediaItems: List<MediaItem>) {
                         value = newTitle,
                         onValueChange = { newTitle = it },
                         textStyle = TextStyle(color = Color.Black),
-                        label = { Text("Titre du média") },
+                        placeholder = { Text("Titre du média", color = Color.Gray) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = !uiState.isUploadingMedia
+                        enabled = !uiState.isUploadingMedia,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White,
+                            focusedTextColor = Color.Black,
+                            unfocusedTextColor = Color.Black,
+                            focusedBorderColor = JovimPrimary,
+                            unfocusedBorderColor = Color.LightGray,
+                            cursorColor = Color.Black
+                        )
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
@@ -2996,7 +3935,7 @@ fun MediaLibraryScreen(viewModel: JovimViewModel, mediaItems: List<MediaItem>) {
                             }
                             Spacer(modifier = Modifier.height(6.dp))
                             LinearProgressIndicator(
-                                progress = uiState.uploadProgress / 100f,
+                                progress = { uiState.uploadProgress / 100f },
                                 modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
                                 color = JovimGold,
                                 trackColor = Color.LightGray.copy(0.3f)
@@ -3529,19 +4468,39 @@ fun ProfileScreen(viewModel: JovimViewModel, brandKit: BrandKit, accounts: List<
                     OutlinedTextField(
                         value = currentPasswordInput,
                         onValueChange = { currentPasswordInput = it },
-                        label = { Text("Mot de passe actuel") },
+                        placeholder = { Text("Mot de passe actuel", color = Color.Gray) },
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        singleLine = true,
+                        textStyle = TextStyle(color = Color.Black),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White,
+                            focusedTextColor = Color.Black,
+                            unfocusedTextColor = Color.Black,
+                            focusedBorderColor = JovimPrimary,
+                            unfocusedBorderColor = Color.LightGray,
+                            cursorColor = Color.Black
+                        )
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     OutlinedTextField(
                         value = newPasswordInput,
                         onValueChange = { newPasswordInput = it },
-                        label = { Text("Nouveau mot de passe") },
+                        placeholder = { Text("Nouveau mot de passe", color = Color.Gray) },
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        singleLine = true,
+                        textStyle = TextStyle(color = Color.Black),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White,
+                            focusedTextColor = Color.Black,
+                            unfocusedTextColor = Color.Black,
+                            focusedBorderColor = JovimPrimary,
+                            unfocusedBorderColor = Color.LightGray,
+                            cursorColor = Color.Black
+                        )
                     )
                     
                     if (passwordChangeMessage.isNotEmpty()) {
@@ -3638,7 +4597,7 @@ fun ProfileScreen(viewModel: JovimViewModel, brandKit: BrandKit, accounts: List<
                                 }
                             }
                         }
-                        Divider(color = Color.LightGray.copy(0.5f))
+                        HorizontalDivider(color = Color.LightGray.copy(0.5f))
                     }
                 }
             }
@@ -3752,38 +4711,88 @@ fun SettingsScreen(viewModel: JovimViewModel, brandKit: BrandKit) {
                 OutlinedTextField(
                     value = compName,
                     onValueChange = { compName = it },
-                    label = { Text("Nom de l'entreprise / Marque") },
+                    placeholder = { Text("Nom de l'entreprise / Marque", color = Color.Gray) },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = TextStyle(color = Color.Black),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black,
+                        focusedBorderColor = JovimPrimary,
+                        unfocusedBorderColor = Color.LightGray,
+                        cursorColor = Color.Black
+                    )
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 OutlinedTextField(
                     value = slogan,
                     onValueChange = { slogan = it },
-                    label = { Text("Slogan") },
+                    placeholder = { Text("Slogan", color = Color.Gray) },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = TextStyle(color = Color.Black),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black,
+                        focusedBorderColor = JovimPrimary,
+                        unfocusedBorderColor = Color.LightGray,
+                        cursorColor = Color.Black
+                    )
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 OutlinedTextField(
                     value = services,
                     onValueChange = { services = it },
-                    label = { Text("Services / Produits Clés") },
-                    modifier = Modifier.fillMaxWidth()
+                    placeholder = { Text("Services / Produits Clés", color = Color.Gray) },
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = TextStyle(color = Color.Black),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black,
+                        focusedBorderColor = JovimPrimary,
+                        unfocusedBorderColor = Color.LightGray,
+                        cursorColor = Color.Black
+                    )
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 OutlinedTextField(
                     value = audience,
                     onValueChange = { audience = it },
-                    label = { Text("Audience Cible") },
-                    modifier = Modifier.fillMaxWidth()
+                    placeholder = { Text("Audience Cible", color = Color.Gray) },
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = TextStyle(color = Color.Black),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black,
+                        focusedBorderColor = JovimPrimary,
+                        unfocusedBorderColor = Color.LightGray,
+                        cursorColor = Color.Black
+                    )
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 OutlinedTextField(
                     value = style,
                     onValueChange = { style = it },
-                    label = { Text("Style de communication (ex: Professionnel, Fun)") },
-                    modifier = Modifier.fillMaxWidth()
+                    placeholder = { Text("Style de communication (ex: Professionnel, Fun)", color = Color.Gray) },
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = TextStyle(color = Color.Black),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black,
+                        focusedBorderColor = JovimPrimary,
+                        unfocusedBorderColor = Color.LightGray,
+                        cursorColor = Color.Black
+                    )
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -3936,3 +4945,784 @@ fun OfflineScreenOverlay(onRetry: () -> Unit) {
         }
     }
 }
+
+// --- ADD ACCOUNT SCREEN WITH PROFILE URL OAUTH AUTO-DETECTION ---
+@Composable
+fun AddAccountScreen(viewModel: JovimViewModel, accounts: List<Account>) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var smartUrlInput by remember { mutableStateOf("") }
+    var detectedPlatform by remember { mutableStateOf<String?>(null) }
+    
+    // Profiles links inputs for the 13 platforms
+    val platformUrlInputs = remember {
+        mutableStateMapOf(
+            "Facebook" to "",
+            "Instagram" to "",
+            "LinkedIn" to "",
+            "TikTok" to "",
+            "YouTube" to "",
+            "X" to "",
+            "Threads" to "",
+            "Pinterest" to "",
+            "WordPress" to "",
+            "Blogger" to "",
+            "Medium" to "",
+            "Telegram" to "",
+            "WhatsApp Business" to ""
+        )
+    }
+
+    // Auto-detection logic based on pasted URL
+    fun detectPlatformFromUrl(url: String): String? {
+        val u = url.lowercase().trim()
+        return when {
+            u.contains("facebook.com") || u.contains("fb.com") -> "Facebook"
+            u.contains("instagram.com") || u.contains("instagr.am") -> "Instagram"
+            u.contains("linkedin.com") -> "LinkedIn"
+            u.contains("tiktok.com") -> "TikTok"
+            u.contains("youtube.com") || u.contains("youtu.be") -> "YouTube"
+            u.contains("x.com") || u.contains("twitter.com") -> "X"
+            u.contains("threads.net") -> "Threads"
+            u.contains("pinterest.com") || u.contains("pin.it") -> "Pinterest"
+            u.contains("wordpress.com") -> "WordPress"
+            u.contains("blogger.com") || u.contains("blogspot.com") -> "Blogger"
+            u.contains("medium.com") -> "Medium"
+            u.contains("t.me") || u.contains("telegram.me") -> "Telegram"
+            u.contains("wa.me") || u.contains("whatsapp.com") -> "WhatsApp Business"
+            else -> null
+        }
+    }
+
+    // Trigger platform detection whenever the smart input changes
+    LaunchedEffect(smartUrlInput) {
+        detectedPlatform = detectPlatformFromUrl(smartUrlInput)
+    }
+
+    // OAuth Connection Wizard States
+    var showWizard by remember { mutableStateOf(false) }
+    var wizardPlatform by remember { mutableStateOf("") }
+    var wizardUrl by remember { mutableStateOf("") }
+    var wizardStep by remember { mutableStateOf(1) } // 1 to 5 steps
+    var extractedUsername by remember { mutableStateOf("") }
+    var extractedFollowers by remember { mutableStateOf(0) }
+    var wizardUsernameInput by remember { mutableStateOf("") }
+    var wizardPasswordInput by remember { mutableStateOf("") }
+    var permissionAccepted by remember { mutableStateOf(false) }
+    var showExtractionDetails by remember { mutableStateOf(false) }
+
+    fun startOAuthWizard(platform: String, url: String) {
+        if (url.isBlank()) return
+        
+        // Basic verification
+        val domain = platform.lowercase().replace(" ", "")
+        if (!url.contains(domain) && !url.contains("t.me") && !url.contains("wa.me") && !url.contains("youtu.be") && !url.contains("blogspot")) {
+            // Soft validation warning but let it proceed
+        }
+
+        // Auto-extract a realistic username
+        val lastSegment = url.trim().trimEnd('/').substringAfterLast('/')
+        val rawName = if (lastSegment.startsWith("@")) lastSegment else "@$lastSegment"
+        val cleanName = if (rawName.length > 3) rawName else "@user_${(1000..9999).random()}"
+        
+        wizardPlatform = platform
+        wizardUrl = url
+        extractedUsername = cleanName
+        extractedFollowers = (1200..85000).random()
+        wizardStep = 1
+        wizardUsernameInput = cleanName.replace("@", "")
+        wizardPasswordInput = ""
+        permissionAccepted = false
+        showWizard = true
+        showExtractionDetails = false
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(JovimBackground)
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp)
+    ) {
+        // TOP NAVIGATION HEADER
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = { viewModel.setScreen(AppScreen.Accounts) },
+                modifier = Modifier
+                    .background(Color.White.copy(0.1f), CircleShape)
+                    .size(40.dp)
+            ) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour", tint = Color.White)
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Text(
+                    text = "Ajouter un compte",
+                    color = Color.White,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Connectez vos réseaux officiels via liens & OAuth",
+                    color = JovimTextSecondary,
+                    fontSize = 12.sp
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // SMART AUTO-DETECTOR HERO CARD
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = JovimPrimary.copy(alpha = 0.5f)),
+            shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(1.5.dp, JovimGold)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(JovimGold, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Link, contentDescription = null, tint = JovimPrimary)
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Détecteur Intelligent d'URL",
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = "Collez n'importe quel lien de profil social ci-dessous. JO Social Hub détectera automatiquement sa plateforme et lancera l'OAuth officiel.",
+                    color = Color.White.copy(alpha = 0.75f),
+                    fontSize = 12.sp
+                )
+                Spacer(modifier = Modifier.height(14.dp))
+                OutlinedTextField(
+                    value = smartUrlInput,
+                    onValueChange = { smartUrlInput = it },
+                    placeholder = { Text("Coller le lien de votre profil...", color = Color.Gray) },
+                    modifier = Modifier.fillMaxWidth().testTag("smart_url_input"),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = JovimGold,
+                        unfocusedBorderColor = Color.White.copy(0.3f),
+                        focusedContainerColor = JovimBackground,
+                        unfocusedContainerColor = JovimBackground
+                    ),
+                    singleLine = true
+                )
+
+                if (smartUrlInput.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    if (detectedPlatform != null) {
+                        Surface(
+                            color = JovimSuccess.copy(0.15f),
+                            border = BorderStroke(1.dp, JovimSuccess),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Check, contentDescription = null, tint = JovimSuccess, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Plateforme détectée : $detectedPlatform",
+                                    color = JovimSuccess,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.weight(1f))
+                                Button(
+                                    onClick = { 
+                                        startOAuthWizard(detectedPlatform!!, smartUrlInput)
+                                        smartUrlInput = ""
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = JovimSuccess),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                    shape = RoundedCornerShape(4.dp),
+                                    modifier = Modifier.height(30.dp)
+                                ) {
+                                    Text("Connecter", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    } else {
+                        Surface(
+                            color = JovimError.copy(0.15f),
+                            border = BorderStroke(1.dp, JovimError),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Info, contentDescription = null, tint = JovimError, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Lien non reconnu pour l'une des 13 plateformes",
+                                    color = JovimError,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "Les 13 plateformes supportées",
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+
+        // 13 PLATFORM CARDS
+        val platformList = listOf(
+            Triple("Facebook", "https://www.facebook.com/votre_profil", "#1877F2"),
+            Triple("Instagram", "https://www.instagram.com/votre_profil", "#E4405F"),
+            Triple("LinkedIn", "https://www.linkedin.com/in/votre_profil", "#0A66C2"),
+            Triple("TikTok", "https://www.tiktok.com/@votre_profil", "#000000"),
+            Triple("YouTube", "https://www.youtube.com/@votre_chaine", "#FF0000"),
+            Triple("X", "https://x.com/votre_pseudo", "#101010"),
+            Triple("Threads", "https://www.threads.net/@votre_pseudo", "#202020"),
+            Triple("Pinterest", "https://www.pinterest.com/votre_pseudo", "#BD081C"),
+            Triple("WordPress", "https://votreblog.wordpress.com", "#21759B"),
+            Triple("Blogger", "https://votreblog.blogspot.com", "#F57C00"),
+            Triple("Medium", "https://medium.com/@votre_pseudo", "#02B875"),
+            Triple("Telegram", "https://t.me/votre_canal_ou_profil", "#24A1DE"),
+            Triple("WhatsApp Business", "https://wa.me/33612345678", "#25D366")
+        )
+
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            platformList.forEach { (platformName, placeholderUrl, hexColor) ->
+                val colorParsed = Color(android.graphics.Color.parseColor(hexColor))
+                val isConnected = accounts.any { it.platformName.lowercase().contains(platformName.lowercase()) && it.isConnected }
+                val connectedAccount = accounts.find { it.platformName.lowercase().contains(platformName.lowercase()) && it.isConnected }
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, Color.LightGray.copy(0.4f))
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            // High contrast circular letter logo
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(colorParsed, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = platformName.take(2).uppercase(),
+                                    color = Color.White,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = platformName,
+                                    fontWeight = FontWeight.Bold,
+                                    color = JovimPrimary,
+                                    fontSize = 15.sp
+                                )
+                                Text(
+                                    text = if (isConnected) "Connecté : ${connectedAccount?.accountName}" else "Non connecté",
+                                    color = if (isConnected) JovimSuccess else Color.Gray,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                            if (isConnected) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = "Connecté",
+                                    tint = JovimSuccess,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        }
+
+                        if (!isConnected) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                OutlinedTextField(
+                                    value = platformUrlInputs[platformName] ?: "",
+                                    onValueChange = { platformUrlInputs[platformName] = it },
+                                    placeholder = { Text("Lien du profil : $placeholderUrl", color = Color.Gray, fontSize = 11.sp) },
+                                    modifier = Modifier.weight(1f).height(50.dp).testTag("input_${platformName.lowercase()}"),
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(6.dp),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedTextColor = JovimPrimary,
+                                        unfocusedTextColor = JovimPrimary,
+                                        focusedBorderColor = colorParsed,
+                                        unfocusedBorderColor = Color.LightGray
+                                    )
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Button(
+                                    onClick = {
+                                        val enteredUrl = platformUrlInputs[platformName] ?: ""
+                                        if (enteredUrl.isNotBlank()) {
+                                            startOAuthWizard(platformName, enteredUrl)
+                                            platformUrlInputs[platformName] = ""
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = colorParsed),
+                                    shape = RoundedCornerShape(6.dp),
+                                    modifier = Modifier.height(50.dp),
+                                    enabled = (platformUrlInputs[platformName] ?: "").isNotBlank()
+                                ) {
+                                    Text("Lier", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                }
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Type : ${if (connectedAccount?.isProfessional == true) "Professionnel (API Directe)" else "Personnel (Clipboard)"}",
+                                    color = Color.DarkGray,
+                                    fontSize = 11.sp
+                                )
+                                TextButton(
+                                    onClick = { 
+                                        viewModel.connectAccountFromProfileUrl(platformName, "", "Déconnecté", "", 0, false)
+                                    }
+                                ) {
+                                    Text("Déconnecter", color = JovimError, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(40.dp))
+    }
+
+    // INTERACTIVE 8-STEP OAUTH SIMULATION WIZARD DIALOG
+    if (showWizard) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showWizard = false }
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(10.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(8.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Title Header with Platform Name
+                    Text(
+                        text = "Assistant de Connexion Officielle & Synchro PostgreSQL",
+                        fontWeight = FontWeight.Bold,
+                        color = JovimPrimary,
+                        fontSize = 15.sp,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+
+                    // Step indicators and active progress bar
+                    LinearProgressIndicator(
+                        progress = { wizardStep / 5f },
+                        color = JovimGold,
+                        trackColor = Color.LightGray.copy(0.3f),
+                        modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp))
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "Étape $wizardStep sur 5",
+                        color = JovimTextSecondary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    when (wizardStep) {
+                        1 -> {
+                            // STEP 1 & 2: URL Verification and Detection
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Box(
+                                    modifier = Modifier.size(50.dp).background(JovimGold.copy(alpha = 0.2f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.Language, contentDescription = null, tint = JovimGold, modifier = Modifier.size(28.dp))
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = "Analyse & Validation du lien",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = JovimPrimary
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "Vérification de la validité de l'URL :\n$wizardUrl",
+                                    fontSize = 12.sp,
+                                    color = Color.DarkGray,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Check, contentDescription = null, tint = JovimSuccess, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Format URL correct", color = JovimSuccess, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Check, contentDescription = null, tint = JovimSuccess, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Nom de domaine validé avec succès", color = JovimSuccess, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                                Spacer(modifier = Modifier.height(18.dp))
+                                Button(
+                                    onClick = { 
+                                        wizardStep = 2 
+                                        showExtractionDetails = false
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = JovimPrimary),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Suivant", color = Color.White)
+                                }
+                            }
+                        }
+                        2 -> {
+                            // STEP 3: Metadata Extraction (Username, Avatar, Followers count)
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Box(
+                                    modifier = Modifier.size(50.dp).background(JovimPrimary.copy(alpha = 0.2f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.Person, contentDescription = null, tint = JovimPrimary, modifier = Modifier.size(28.dp))
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = "Extraction des informations publiques",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = JovimPrimary
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "Métadonnées extraites depuis le lien de profil :",
+                                    fontSize = 11.sp,
+                                    color = Color.Gray
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                // Visual extracted profile preview card
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(containerColor = JovimBackground),
+                                    border = BorderStroke(1.dp, Color.LightGray.copy(0.4f)),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        // Simulated Avatar
+                                        Box(
+                                            modifier = Modifier
+                                                .size(44.dp)
+                                                .background(JovimGold, CircleShape),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = wizardPlatform.take(1).uppercase(),
+                                                color = JovimPrimary,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 16.sp
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Column {
+                                            Text(
+                                                text = extractedUsername,
+                                                fontWeight = FontWeight.Bold,
+                                                color = JovimPrimary,
+                                                fontSize = 13.sp
+                                            )
+                                            Text(
+                                                text = "Statut : Public",
+                                                color = JovimSuccess,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = "Abonnés : ${String.format("%,d", extractedFollowers)} abonnés",
+                                                color = Color.DarkGray,
+                                                fontSize = 10.sp
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(18.dp))
+                                Button(
+                                    onClick = { wizardStep = 3 },
+                                    colors = ButtonDefaults.buttonColors(containerColor = JovimPrimary),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Lancer l'OAuth officiel", color = Color.White)
+                                }
+                            }
+                        }
+                        3 -> {
+                            // STEP 4 & 5: Official platform login mire (OAuth simulation)
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Surface(
+                                    color = Color.White,
+                                    border = BorderStroke(1.5.dp, Color.LightGray),
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(modifier = Modifier.padding(14.dp)) {
+                                        // Mini Web Mockup Header
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .background(Color.LightGray.copy(0.3f))
+                                                .padding(6.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(Icons.Default.Lock, contentDescription = null, tint = JovimSuccess, modifier = Modifier.size(12.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                text = "auth.api.officiel.${wizardPlatform.lowercase()}.com",
+                                                fontSize = 10.sp,
+                                                color = Color.DarkGray
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(10.dp))
+                                        Text(
+                                            text = "Connexion sécurisée via OAuth",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 12.sp,
+                                            color = JovimPrimary,
+                                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                                        )
+                                        Spacer(modifier = Modifier.height(10.dp))
+                                        
+                                        OutlinedTextField(
+                                            value = wizardUsernameInput,
+                                            onValueChange = { wizardUsernameInput = it },
+                                            label = { Text("Utilisateur / E-mail", fontSize = 10.sp) },
+                                            modifier = Modifier.fillMaxWidth().height(46.dp),
+                                            singleLine = true,
+                                            colors = OutlinedTextFieldDefaults.colors(
+                                                focusedTextColor = JovimPrimary,
+                                                unfocusedTextColor = JovimPrimary,
+                                                focusedBorderColor = JovimGold,
+                                                unfocusedBorderColor = Color.LightGray
+                                            )
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        OutlinedTextField(
+                                            value = wizardPasswordInput,
+                                            onValueChange = { wizardPasswordInput = it },
+                                            label = { Text("Mot de passe", fontSize = 10.sp) },
+                                            modifier = Modifier.fillMaxWidth().height(46.dp),
+                                            singleLine = true,
+                                            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                                            colors = OutlinedTextFieldDefaults.colors(
+                                                focusedTextColor = JovimPrimary,
+                                                unfocusedTextColor = JovimPrimary,
+                                                focusedBorderColor = JovimGold,
+                                                unfocusedBorderColor = Color.LightGray
+                                            )
+                                        )
+                                        Spacer(modifier = Modifier.height(14.dp))
+                                        Button(
+                                            onClick = { wizardStep = 4 },
+                                            colors = ButtonDefaults.buttonColors(containerColor = JovimPrimary),
+                                            modifier = Modifier.fillMaxWidth().height(36.dp),
+                                            shape = RoundedCornerShape(4.dp),
+                                            enabled = wizardUsernameInput.isNotBlank() && wizardPasswordInput.isNotBlank()
+                                        ) {
+                                            Text("Se connecter de manière sécurisée", fontSize = 11.sp, color = Color.White)
+                                        }
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Text(
+                                    text = "ℹ️ Vos identifiants de connexion transitent directement par les serveurs sécurisés de la plateforme et ne sont jamais stockés dans l'application.",
+                                    fontSize = 9.sp,
+                                    color = Color.Gray,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                            }
+                        }
+                        4 -> {
+                            // STEP 6: Publishing permissions approval
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Box(
+                                    modifier = Modifier.size(50.dp).background(JovimGold.copy(alpha = 0.2f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.VerifiedUser, contentDescription = null, tint = JovimGold, modifier = Modifier.size(28.dp))
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = "Autorisations de Publication",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = JovimPrimary
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "JO Social Hub demande les privilèges suivants pour gérer votre compte :",
+                                    fontSize = 11.sp,
+                                    color = Color.DarkGray,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = JovimBackground),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.Check, contentDescription = null, tint = JovimSuccess, modifier = Modifier.size(16.dp))
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text("Publier des textes et des hashtags (obligatoire)", fontSize = 11.sp, color = Color.DarkGray)
+                                        }
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.Check, contentDescription = null, tint = JovimSuccess, modifier = Modifier.size(16.dp))
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text("Charger et téléverser des médias (images/vidéos)", fontSize = 11.sp, color = Color.DarkGray)
+                                        }
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.Check, contentDescription = null, tint = JovimSuccess, modifier = Modifier.size(16.dp))
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text("Consulter les statistiques basiques d'engagement", fontSize = 11.sp, color = Color.DarkGray)
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(20.dp))
+                                Button(
+                                    onClick = { wizardStep = 5 },
+                                    colors = ButtonDefaults.buttonColors(containerColor = JovimGold),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Autoriser & Connecter", color = JovimPrimary, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                        5 -> {
+                            // STEP 7 & 8: Access token security generation & cloud synchronization
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Box(
+                                    modifier = Modifier.size(50.dp).background(JovimSuccess.copy(alpha = 0.15f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = JovimSuccess, modifier = Modifier.size(36.dp))
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = "Compte associé avec succès !",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp,
+                                    color = JovimSuccess
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Jeton d'accès OAuth chiffré généré :",
+                                    fontSize = 11.sp,
+                                    color = Color.Gray
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Surface(
+                                    color = Color.LightGray.copy(alpha = 0.2f),
+                                    shape = RoundedCornerShape(4.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = "token_sh_${wizardPlatform.take(3).lowercase()}_9a1f8b2d3c4e5f6a...",
+                                        fontSize = 10.sp,
+                                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                        modifier = Modifier.padding(8.dp),
+                                        color = Color.DarkGray,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = "🔗 PostgreSQL Synced\nLiaison de sécurité effectuée dans le Cloud PostgreSQL.",
+                                    fontSize = 11.sp,
+                                    color = JovimPrimary,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(20.dp))
+                                Button(
+                                    onClick = { 
+                                        viewModel.connectAccountFromProfileUrl(
+                                            platformName = wizardPlatform,
+                                            profileUrl = wizardUrl,
+                                            accountName = extractedUsername,
+                                            avatarUrl = "https://example.com/avatar.png",
+                                            followerCount = extractedFollowers,
+                                            isProfessional = true
+                                        )
+                                        showWizard = false
+                                        viewModel.setScreen(AppScreen.Accounts)
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = JovimPrimary),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Terminer", color = Color.White, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+

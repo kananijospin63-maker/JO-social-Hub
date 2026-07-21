@@ -16,37 +16,37 @@ import java.util.concurrent.TimeUnit
 
 @JsonClass(generateAdapter = true)
 data class Part(
-    @Json(name = "text") val text: String? = null
+    @field:Json(name = "text") val text: String? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class Content(
-    @Json(name = "parts") val parts: List<Part>
+    @field:Json(name = "parts") val parts: List<Part>
 )
 
 @JsonClass(generateAdapter = true)
 data class GenerationConfig(
-    @Json(name = "temperature") val temperature: Float? = null,
-    @Json(name = "topP") val topP: Float? = null,
-    @Json(name = "topK") val topK: Int? = null,
-    @Json(name = "maxOutputTokens") val maxOutputTokens: Int? = null
+    @field:Json(name = "temperature") val temperature: Float? = null,
+    @field:Json(name = "topP") val topP: Float? = null,
+    @field:Json(name = "topK") val topK: Int? = null,
+    @field:Json(name = "maxOutputTokens") val maxOutputTokens: Int? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class GenerateContentRequest(
-    @Json(name = "contents") val contents: List<Content>,
-    @Json(name = "systemInstruction") val systemInstruction: Content? = null,
-    @Json(name = "generationConfig") val generationConfig: GenerationConfig? = null
+    @field:Json(name = "contents") val contents: List<Content>,
+    @field:Json(name = "systemInstruction") val systemInstruction: Content? = null,
+    @field:Json(name = "generationConfig") val generationConfig: GenerationConfig? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class Candidate(
-    @Json(name = "content") val content: Content? = null
+    @field:Json(name = "content") val content: Content? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class GenerateContentResponse(
-    @Json(name = "candidates") val candidates: List<Candidate>? = null
+    @field:Json(name = "candidates") val candidates: List<Candidate>? = null
 )
 
 interface GeminiApiService {

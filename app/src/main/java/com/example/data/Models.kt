@@ -11,7 +11,8 @@ data class Account(
     val isConnected: Boolean = false,
     val avatarUrl: String = "",
     val followerCount: Int = 0,
-    val status: String = "Disconnected"
+    val status: String = "Disconnected",
+    val isProfessional: Boolean = true
 )
 
 @Entity(tableName = "posts")
@@ -67,7 +68,9 @@ data class User(
     val email: String, // email or username like jospin.kanani
     val passwordHash: String,
     val role: String = "Utilisateur", // "Administrateur", "Utilisateur"
-    val isGoogleConnected: Boolean = false
+    val isGoogleConnected: Boolean = false,
+    val isEmailVerified: Boolean = false,
+    val verificationCode: String = ""
 )
 
 @Entity(tableName = "social_profiles")
