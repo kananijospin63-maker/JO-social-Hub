@@ -1,0 +1,6 @@
+{
+  "name": "JO Social Hub",
+  "description": "Plateforme intelligente de centralisation et de publication multi-réseaux assistée par l'IA Gemini.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
