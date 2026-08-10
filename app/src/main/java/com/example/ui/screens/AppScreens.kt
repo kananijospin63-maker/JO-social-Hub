@@ -1280,7 +1280,6 @@ fun LoginScreen(viewModel: JovimViewModel) {
             // Email Code & Link Verification Dialog
             if (uiState.showEmailVerificationDialog) {
                 var codeInput by remember { mutableStateOf("") }
-                var codeError by remember { mutableStateOf("") }
 
                 AlertDialog(
                     onDismissRequest = { viewModel.setVerificationDialog(false) },
@@ -1313,9 +1312,10 @@ fun LoginScreen(viewModel: JovimViewModel) {
 
                             OutlinedTextField(
                                 value = codeInput,
-                                onValueChange = { 
+                                onValueChange = {
                                     codeInput = it
-                                    codeError = ""
+                                    // Clear the error from uiState when user starts typing
+                                    viewModel.clearAuthError()
                                 },
                                 placeholder = { Text("Code à 6 chiffres", color = Color.Gray, fontSize = 12.sp) },
                                 textStyle = TextStyle(color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 16.sp),
@@ -1332,9 +1332,10 @@ fun LoginScreen(viewModel: JovimViewModel) {
                                 )
                             )
 
-                            if (codeError.isNotEmpty()) {
+                            // Error driven by uiState.authError — always in sync with the coroutine result
+                            if (!uiState.authError.isNullOrBlank()) {
                                 Text(
-                                    text = codeError,
+                                    text = uiState.authError,
                                     color = JovimError,
                                     fontSize = 11.sp,
                                     modifier = Modifier.padding(top = 4.dp)
@@ -1355,15 +1356,10 @@ fun LoginScreen(viewModel: JovimViewModel) {
                                 }
                                 Button(
                                     onClick = {
-                                        if (codeInput.isBlank()) {
-                                            codeError = "Veuillez entrer le code de confirmation."
-                                        } else {
-                                            val ok = viewModel.verifyEmailCode(uiState.verificationPendingEmail, codeInput)
-                                            if (!ok) {
-                                                // Wait 100ms then check if code didn't match
-                                                codeError = "Code de confirmation incorrect."
-                                            }
-                                        }
+                                        // verifyEmailCode is now a fire-and-forget coroutine.
+                                        // Success → uiState.currentScreen changes to Dashboard.
+                                        // Failure → uiState.authError is set and displayed above.
+                                        viewModel.verifyEmailCode(uiState.verificationPendingEmail, codeInput)
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = JovimSuccess),
                                     shape = RoundedCornerShape(6.dp)
@@ -2130,34 +2126,11 @@ fun AccountsScreen(viewModel: JovimViewModel, accounts: List<Account>) {
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
-                                            // Badges styling per social media platform
-                                            val platColor = when(profile.platformName) {
-                                                "Facebook" -> Color(0xFF1877F2)
-                                                "Instagram" -> Color(0xFFE4405F)
-                                                "TikTok" -> Color(0xFF000000)
-                                                "YouTube" -> Color(0xFFFF0000)
-                                                "LinkedIn" -> Color(0xFF0A66C2)
-                                                "X" -> Color(0xFF14171A)
-                                                "Threads" -> Color(0xFF000000)
-                                                "Pinterest" -> Color(0xFFBD081C)
-                                                "WordPress" -> Color(0xFF21759B)
-                                                "Blogger" -> Color(0xFFF57C00)
-                                                "Medium" -> Color(0xFF02B875)
-                                                else -> JovimPrimary
-                                            }
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(28.dp)
-                                                    .background(platColor, CircleShape),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Text(
-                                                    profile.platformName.take(1),
-                                                    color = Color.White,
-                                                    fontWeight = FontWeight.ExtraBold,
-                                                    fontSize = 13.sp
-                                                )
-                                            }
+                                            // Real platform logo
+                                            PlatformLogo(
+                                                platformName = profile.platformName,
+                                                modifier = Modifier.size(28.dp)
+                                            )
                                             Spacer(modifier = Modifier.width(10.dp))
                                             Text(
                                                 profile.platformName,
@@ -2337,18 +2310,19 @@ fun AccountsScreen(viewModel: JovimViewModel, accounts: List<Account>) {
 fun PlatformLogo(platformName: String, modifier: Modifier = Modifier) {
     val pLower = platformName.lowercase()
     val (bgColor, iconResId) = when {
-        pLower.contains("facebook") -> Pair(Color(0xFF1877F2), R.drawable.ic_facebook)
+        pLower.contains("facebook")  -> Pair(Color(0xFF1877F2), R.drawable.ic_facebook)
         pLower.contains("instagram") -> Pair(Color(0xFFE4405F), R.drawable.ic_instagram)
-        pLower.contains("linkedin") -> Pair(Color(0xFF0A66C2), R.drawable.ic_linkedin)
-        pLower.contains("youtube") -> Pair(Color(0xFFFF0000), R.drawable.ic_youtube)
-        pLower.contains("tiktok") -> Pair(Color(0xFF010101), R.drawable.ic_tiktok)
+        pLower.contains("linkedin")  -> Pair(Color(0xFF0A66C2), R.drawable.ic_linkedin)
+        pLower.contains("youtube")   -> Pair(Color(0xFFFF0000), R.drawable.ic_youtube)
+        pLower.contains("tiktok")    -> Pair(Color(0xFF010101), R.drawable.ic_tiktok)
         pLower.contains("x") || pLower.contains("twitter") -> Pair(Color(0xFF000000), R.drawable.ic_x_twitter)
-        pLower.contains("threads") -> Pair(Color(0xFF101010), R.drawable.ic_threads)
+        pLower.contains("threads")   -> Pair(Color(0xFF101010), R.drawable.ic_threads)
         pLower.contains("pinterest") -> Pair(Color(0xFFBD081C), R.drawable.ic_pinterest)
         pLower.contains("wordpress") -> Pair(Color(0xFF21759B), R.drawable.ic_wordpress)
-        pLower.contains("blogger") -> Pair(Color(0xFFF57C00), R.drawable.ic_blogger)
-        pLower.contains("telegram") -> Pair(Color(0xFF229ED9), R.drawable.ic_telegram)
-        pLower.contains("whatsapp") -> Pair(Color(0xFF25D366), R.drawable.ic_whatsapp)
+        pLower.contains("blogger")   -> Pair(Color(0xFFF57C00), R.drawable.ic_blogger)
+        pLower.contains("telegram")  -> Pair(Color(0xFF229ED9), R.drawable.ic_telegram)
+        pLower.contains("whatsapp")  -> Pair(Color(0xFF25D366), R.drawable.ic_whatsapp)
+        pLower.contains("medium")    -> Pair(Color(0xFF02B875), R.drawable.ic_medium)
         else -> Pair(JovimPrimary, null)
     }
 
@@ -5026,20 +5000,8 @@ fun AddAccountScreen(viewModel: JovimViewModel, accounts: List<Account>) {
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            // High contrast circular letter logo
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .background(colorParsed, CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = platformName.take(2).uppercase(),
-                                    color = Color.White,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
+                            // Real platform logo
+                            PlatformLogo(platformName = platformName, modifier = Modifier.size(36.dp))
                             Spacer(modifier = Modifier.width(10.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
@@ -5261,20 +5223,11 @@ fun AddAccountScreen(viewModel: JovimViewModel, accounts: List<Account>) {
                                         modifier = Modifier.padding(12.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        // Simulated Avatar
-                                        Box(
-                                            modifier = Modifier
-                                                .size(44.dp)
-                                                .background(JovimGold, CircleShape),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text(
-                                                text = wizardPlatform.take(1).uppercase(),
-                                                color = JovimPrimary,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 16.sp
-                                            )
-                                        }
+                                        // Platform logo as avatar
+                                        PlatformLogo(
+                                            platformName = wizardPlatform,
+                                            modifier = Modifier.size(44.dp)
+                                        )
                                         Spacer(modifier = Modifier.width(10.dp))
                                         Column {
                                             Text(
