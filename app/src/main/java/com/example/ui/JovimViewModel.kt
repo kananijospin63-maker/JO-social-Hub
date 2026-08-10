@@ -1,31 +1,40 @@
 package com.example.ui
 
-import android.app.Application
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import java.text.SimpleDateFormat
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.*
 import com.example.data.repository.JovimRepository
 import com.example.data.repository.PasswordHasher
+import com.example.domain.usecase.AdaptContentUseCase
+import com.example.domain.usecase.AnalyzePostUseCase
+import com.example.domain.usecase.LoginUserUseCase
+import com.example.domain.usecase.RegisterUserUseCase
+import com.example.domain.usecase.SeedDatabaseUseCase
+import com.example.domain.usecase.SendAiMessageUseCase
+import com.example.domain.model.onSuccess
+import com.example.domain.model.onError
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import javax.inject.Inject
 
-class JovimViewModel(application: Application) : AndroidViewModel(application) {
-    private val database = AppDatabase.getDatabase(application)
-    private val repository = JovimRepository(
-        accountDao = database.accountDao(),
-        postDao = database.postDao(),
-        chatMessageDao = database.chatMessageDao(),
-        brandKitDao = database.brandKitDao(),
-        mediaItemDao = database.mediaItemDao(),
-        userDao = database.userDao(),
-        socialProfileDao = database.socialProfileDao(),
-        authenticationLogDao = database.authenticationLogDao()
-    )
+@HiltViewModel
+class JovimViewModel @Inject constructor(
+    @ApplicationContext private val appContext: Context,
+    private val repository: JovimRepository,
+    private val sendAiMessageUseCase: SendAiMessageUseCase,
+    private val adaptContentUseCase: AdaptContentUseCase,
+    private val analyzePostUseCase: AnalyzePostUseCase,
+    private val registerUserUseCase: RegisterUserUseCase,
+    private val loginUserUseCase: LoginUserUseCase,
+    private val seedDatabaseUseCase: SeedDatabaseUseCase
+) : ViewModel() {
 
     // Flow observations from database
     val accounts: StateFlow<List<Account>> = repository.allAccounts
@@ -56,22 +65,19 @@ class JovimViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         viewModelScope.launch {
-            // Prepopulate database with mock social data for initial high-end presentation
-            repository.prepopulateDatabaseIfEmpty()
+            seedDatabaseUseCase()
         }
-        
-        // Start proactive background network monitoring (every 3s)
         viewModelScope.launch {
             while (true) {
                 checkNetworkStatus()
-                kotlinx.coroutines.delay(3000)
+                delay(3000)
             }
         }
     }
 
     // --- NETWORK STATUS MONITORING ---
     fun checkNetworkStatus(): Boolean {
-        val connectivityManager = getApplication<Application>().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val connectivityManager = appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val network = connectivityManager.activeNetwork
         val capabilities = network?.let { connectivityManager.getNetworkCapabilities(it) }
         val online = capabilities?.let {
@@ -121,34 +127,6 @@ class JovimViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(authError = null) }
     }
 
-    fun isValidEmail(email: String): Boolean {
-        val trimmed = email.trim()
-        if (trimmed.contains("..") || trimmed.contains("@@") || trimmed.count { it == '@' } != 1) return false
-        val parts = trimmed.split("@")
-        if (parts.size != 2) return false
-        val name = parts[0]
-        val domain = parts[1]
-        if (name.isBlank() || domain.isBlank()) return false
-        if (domain.startsWith(".") || domain.endsWith(".")) return false
-        if (!domain.contains(".")) return false
-        val domainParts = domain.split(".")
-        if (domainParts.size < 2) return false
-        val extension = domainParts.last()
-        if (extension.length < 2 || extension.length > 6) return false
-        
-        val pattern = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$".toRegex()
-        return pattern.matches(trimmed)
-    }
-
-    fun isDisposableEmail(email: String): Boolean {
-        val domain = email.substringAfter("@").lowercase()
-        val blacklistedDomains = listOf(
-            "tempmail.com", "yopmail.com", "mailinator.com", "dispostable.com", 
-            "10minutemail.com", "guerrillamail.com", "tempmail.fr", "trashmail.com"
-        )
-        return blacklistedDomains.contains(domain)
-    }
-
     // --- GOOGLE EXISTENCE VERIFICATION OPERATIONS ---
     fun setGoogleExistenceDialog(show: Boolean) {
         _uiState.update { it.copy(showGoogleExistenceDialog = show) }
@@ -179,14 +157,24 @@ class JovimViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(showEmailVerificationDialog = show) }
     }
 
-    fun verifyEmailCode(email: String, enteredCode: String): Boolean {
-        var isCorrect = false
-        // Make it blocking/sequential to ensure we retrieve and verify correctly
-        val currentState = _uiState.value
+    /**
+     * Vérifie le code de confirmation email.
+     *
+     * Le résultat est communiqué exclusivement via uiState :
+     *  - Succès → currentScreen passe à Dashboard, showEmailVerificationDialog = false
+     *  - Échec  → authError contient le message d'erreur
+     *
+     * L'ancienne version retournait un Boolean synchrone qui était toujours false
+     * car la coroutine se terminait après le return — bug de concurrence corrigé ici.
+     */
+    fun verifyEmailCode(email: String, enteredCode: String) {
+        if (enteredCode.isBlank()) {
+            _uiState.update { it.copy(authError = "Veuillez entrer le code de confirmation.") }
+            return
+        }
         viewModelScope.launch {
             val user = repository.getUserByEmail(email)
             if (user != null && user.verificationCode == enteredCode) {
-                isCorrect = true
                 val updatedUser = user.copy(isEmailVerified = true)
                 repository.updateUser(updatedUser)
                 addPostgresLog("Adresse email confirmée avec succès pour $email")
@@ -209,7 +197,6 @@ class JovimViewModel(application: Application) : AndroidViewModel(application) {
                 _uiState.update { it.copy(authError = "Code de confirmation incorrect.") }
             }
         }
-        return isCorrect
     }
 
     fun activateAccountDirectly(email: String) {
@@ -257,24 +244,6 @@ class JovimViewModel(application: Application) : AndroidViewModel(application) {
 
     // --- REAL SECURE SIGN UP ---
     fun registerUser(fullName: String, emailInput: String, pass: String, passConfirm: String) {
-        val email = emailInput.trim()
-        if (fullName.isBlank() || email.isBlank() || pass.isBlank()) {
-            _uiState.update { it.copy(authError = "Veuillez remplir tous les champs.") }
-            return
-        }
-        if (!isValidEmail(email)) {
-            _uiState.update { it.copy(authError = "Adresse e-mail invalide (format incorrect). Ex: nom@domaine.com") }
-            return
-        }
-        if (isDisposableEmail(email)) {
-            _uiState.update { it.copy(authError = "Les adresses e-mails temporaires ou jetables ne sont pas acceptées.") }
-            return
-        }
-        if (pass != passConfirm) {
-            _uiState.update { it.copy(authError = "Les mots de passe ne correspondent pas.") }
-            return
-        }
-        
         viewModelScope.launch {
             val isConnected = checkNetworkStatus()
             if (!isConnected) {
@@ -282,67 +251,39 @@ class JovimViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
 
-            val existing = repository.getUserByEmail(email)
-            if (existing != null) {
-                _uiState.update { it.copy(authError = "Cette adresse email est déjà utilisée. Veuillez vous connecter ou utiliser une autre adresse.") }
-                return@launch
+            when (val result = registerUserUseCase(
+                fullName, emailInput, pass, passConfirm,
+                googleVerified = _uiState.value.googleExistenceVerified,
+                verifyingGoogleEmail = _uiState.value.verifyingGoogleEmail
+            )) {
+                is RegisterUserUseCase.Result.Error -> {
+                    _uiState.update { it.copy(authError = result.message) }
+                }
+                is RegisterUserUseCase.Result.NeedsGoogleVerification -> {
+                    _uiState.update { it.copy(
+                        showGoogleExistenceDialog = true,
+                        verifyingGoogleEmail = result.email,
+                        authError = null
+                    ) }
+                    addPostgresLog("Vérification requise de l'existence du compte Google pour : ${result.email}")
+                }
+                is RegisterUserUseCase.Result.Success -> {
+                    addPostgresLog("Nouvel utilisateur enregistré (en attente de confirmation) : $fullName (${result.user.email})")
+                    addPostgresLog("Envoi de l'email de confirmation à ${result.user.email}...")
+                    addPostgresLog("Code de sécurité généré : ${result.verificationCode}")
+                    _uiState.update { it.copy(
+                        showEmailVerificationDialog = true,
+                        verificationPendingEmail = result.user.email,
+                        generatedVerificationCode = result.verificationCode,
+                        authError = "Un email de confirmation a été envoyé. Veuillez vérifier votre boîte de réception avant de vous connecter."
+                    ) }
+                }
             }
-
-            // Google Existence verification for Gmail/Google accounts
-            val isGmail = email.endsWith("@gmail.com") || email.endsWith("@google.com")
-            if (isGmail && (!_uiState.value.googleExistenceVerified || _uiState.value.verifyingGoogleEmail != email)) {
-                _uiState.update { it.copy(
-                    showGoogleExistenceDialog = true,
-                    verifyingGoogleEmail = email,
-                    authError = null
-                ) }
-                addPostgresLog("Vérification requise de l'existence du compte Google pour : $email")
-                return@launch
-            }
-
-            val generatedCode = (100000..999999).random().toString()
-            val newUser = User(
-                fullName = fullName,
-                email = email,
-                passwordHash = PasswordHasher.hashPassword(pass),
-                role = "Utilisateur",
-                isGoogleConnected = false,
-                isEmailVerified = false,
-                verificationCode = generatedCode
-            )
-            repository.insertUser(newUser)
-            
-            // Add to sync log
-            addPostgresLog("Nouvel utilisateur enregistré (en attente de confirmation) : $fullName ($email)")
-            addPostgresLog("Synchronisation initiale réussie avec PostgreSQL")
-            addPostgresLog("Envoi de l'email de confirmation à $email...")
-            addPostgresLog("Code de sécurité généré : $generatedCode")
-            
-            repository.insertAuthLog(
-                AuthenticationLog(
-                    email = email,
-                    actionType = "REGISTER_PENDING",
-                    details = "Nouvel utilisateur enregistré (en attente d'activation) : $fullName ($email)"
-                )
-            )
-
-            _uiState.update { it.copy(
-                showEmailVerificationDialog = true,
-                verificationPendingEmail = email,
-                generatedVerificationCode = generatedCode,
-                authError = "Un email de confirmation a été envoyé. Veuillez vérifier votre boîte de réception avant de vous connecter."
-            ) }
         }
     }
 
     // --- REAL SECURE SIGN IN ---
     fun loginUserWithCredentials(emailInput: String, pass: String) {
-        val email = emailInput.trim()
-        if (email.isBlank() || pass.isBlank()) {
-            _uiState.update { it.copy(authError = "Veuillez remplir tous les champs.") }
-            return
-        }
-
         viewModelScope.launch {
             val isConnected = checkNetworkStatus()
             if (!isConnected) {
@@ -350,61 +291,31 @@ class JovimViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
 
-            val user = repository.getUserByEmail(email)
-            if (user == null) {
-                repository.insertAuthLog(
-                    AuthenticationLog(
-                        email = email,
-                        actionType = "LOGIN_FAILED",
-                        details = "Échec connexion: Compte inexistant pour l'e-mail $email"
-                    )
-                )
-                _uiState.update { it.copy(authError = "Ce compte n'existe pas encore. Veuillez créer un compte.") }
-                return@launch
+            when (val result = loginUserUseCase(emailInput, pass)) {
+                is LoginUserUseCase.Result.Error -> {
+                    _uiState.update { it.copy(authError = result.message) }
+                }
+                is LoginUserUseCase.Result.EmailNotVerified -> {
+                    _uiState.update { it.copy(
+                        authError = "Un email de confirmation a été envoyé. Veuillez vérifier votre boîte de réception avant de vous connecter.",
+                        showEmailVerificationDialog = true,
+                        verificationPendingEmail = result.email,
+                        generatedVerificationCode = result.verificationCode
+                    ) }
+                    addPostgresLog("Tentative de connexion bloquée - E-mail non vérifié pour ${result.email}")
+                }
+                is LoginUserUseCase.Result.Success -> {
+                    addPostgresLog("Connexion utilisateur validée : ${result.user.fullName}")
+                    addPostgresLog("Données utilisateur chargées depuis PostgreSQL")
+                    _uiState.update { it.copy(
+                        currentUser = result.user,
+                        userEmail = result.user.email,
+                        isLoggedIn = true,
+                        currentScreen = AppScreen.Dashboard,
+                        authError = null
+                    ) }
+                }
             }
-
-            val verified = PasswordHasher.verifyPassword(pass, user.passwordHash)
-            if (!verified) {
-                repository.insertAuthLog(
-                    AuthenticationLog(
-                        email = email,
-                        actionType = "LOGIN_FAILED",
-                        details = "Échec connexion: Mot de passe incorrect pour $email"
-                    )
-                )
-                _uiState.update { it.copy(authError = "Identifiants invalides (mot de passe incorrect).") }
-                return@launch
-            }
-
-            if (!user.isEmailVerified) {
-                _uiState.update { it.copy(
-                    authError = "Un email de confirmation a été envoyé. Veuillez vérifier votre boîte de réception avant de vous connecter.",
-                    showEmailVerificationDialog = true,
-                    verificationPendingEmail = email,
-                    generatedVerificationCode = user.verificationCode
-                ) }
-                addPostgresLog("Tentative de connexion bloquée - E-mail non vérifié pour $email")
-                return@launch
-            }
-
-            // Sync update
-            addPostgresLog("Connexion utilisateur validée : ${user.fullName}")
-            addPostgresLog("Données utilisateur chargées depuis PostgreSQL")
-            repository.insertAuthLog(
-                AuthenticationLog(
-                    email = email,
-                    actionType = "LOGIN_SUCCESS",
-                    details = "Connexion réussie de l'utilisateur ${user.fullName}"
-                )
-            )
-
-            _uiState.update { it.copy(
-                currentUser = user,
-                userEmail = email,
-                isLoggedIn = true,
-                currentScreen = AppScreen.Dashboard,
-                authError = null
-            ) }
         }
     }
 
@@ -579,21 +490,16 @@ class JovimViewModel(application: Application) : AndroidViewModel(application) {
         if (userMessage.isBlank()) return
 
         viewModelScope.launch {
-            val userMsg = ChatMessage(role = "user", text = userMessage)
-            repository.insertMessage(userMsg)
-
+            repository.insertMessage(ChatMessage(role = "user", text = userMessage))
             _uiState.update { it.copy(isAiLoading = true) }
-
-            try {
-                val aiResponse = repository.askJovimAi(userMessage)
-                val aiMsg = ChatMessage(role = "model", text = aiResponse)
-                repository.insertMessage(aiMsg)
-            } catch (e: Exception) {
-                val errorMsg = ChatMessage(role = "model", text = "Une erreur est survenue lors de l'envoi : ${e.message}")
-                repository.insertMessage(errorMsg)
-            } finally {
-                _uiState.update { it.copy(isAiLoading = false) }
-            }
+            sendAiMessageUseCase(userMessage)
+                .onSuccess { response ->
+                    repository.insertMessage(ChatMessage(role = "model", text = response))
+                }
+                .onError { message, _ ->
+                    repository.insertMessage(ChatMessage(role = "model", text = "Erreur : $message"))
+                }
+            _uiState.update { it.copy(isAiLoading = false) }
         }
     }
 
@@ -672,14 +578,14 @@ class JovimViewModel(application: Application) : AndroidViewModel(application) {
 
         viewModelScope.launch {
             _uiState.update { it.copy(isAdaptationLoading = true) }
-            try {
-                val response = repository.adaptContentForPlatforms(text, platforms)
-                _uiState.update { it.copy(adaptedContent = response) }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(adaptedContent = "Erreur d'adaptation : ${e.message}") }
-            } finally {
-                _uiState.update { it.copy(isAdaptationLoading = false) }
-            }
+            adaptContentUseCase(text, platforms)
+                .onSuccess { adapted ->
+                    _uiState.update { it.copy(adaptedContent = adapted) }
+                }
+                .onError { message, _ ->
+                    _uiState.update { it.copy(adaptedContent = "Erreur d'adaptation : $message") }
+                }
+            _uiState.update { it.copy(isAdaptationLoading = false) }
         }
     }
 
@@ -690,17 +596,17 @@ class JovimViewModel(application: Application) : AndroidViewModel(application) {
 
         viewModelScope.launch {
             _uiState.update { it.copy(isAuditLoading = true) }
-            try {
-                val result = repository.analyzePostContent(text)
-                _uiState.update { it.copy(
-                    qualityScore = result.score,
-                    aiAnalysisFeedback = result.rawAnalysis
-                ) }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(aiAnalysisFeedback = "Erreur d'analyse : ${e.message}") }
-            } finally {
-                _uiState.update { it.copy(isAuditLoading = false) }
-            }
+            analyzePostUseCase(text)
+                .onSuccess { result ->
+                    _uiState.update { it.copy(
+                        qualityScore = result.score,
+                        aiAnalysisFeedback = result.rawAnalysis
+                    ) }
+                }
+                .onError { message, _ ->
+                    _uiState.update { it.copy(aiAnalysisFeedback = "Erreur d'analyse : $message") }
+                }
+            _uiState.update { it.copy(isAuditLoading = false) }
         }
     }
 
