@@ -1,10 +1,19 @@
 package com.example.data
 
-import android.content.Context
 import androidx.room.Database
-import androidx.room.Room
 import androidx.room.RoomDatabase
 
+/**
+ * Room database definition.
+ *
+ * - exportSchema = true  → Room writes a JSON schema file to the schemas/ folder
+ *   on each version bump, giving you a permanent record of every schema change.
+ *   These files should be committed to version control.
+ *
+ * - The companion object / manual singleton is removed.
+ *   The database instance is now provided exclusively by Hilt (DatabaseModule),
+ *   which guarantees a single instance for the app's lifetime.
+ */
 @Database(
     entities = [
         Account::class,
@@ -17,7 +26,7 @@ import androidx.room.RoomDatabase
         AuthenticationLog::class
     ],
     version = 5,
-    exportSchema = false
+    exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun accountDao(): AccountDao
@@ -28,23 +37,4 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun socialProfileDao(): SocialProfileDao
     abstract fun authenticationLogDao(): AuthenticationLogDao
-
-    companion object {
-        @Volatile
-        private var INSTANCE: AppDatabase? = null
-
-        fun getDatabase(context: Context): AppDatabase {
-            return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
-                    context.applicationContext,
-                    AppDatabase::class.java,
-                    "jovim_social_hub_database"
-                )
-                .fallbackToDestructiveMigration(true)
-                .build()
-                INSTANCE = instance
-                instance
-            }
-        }
-    }
 }

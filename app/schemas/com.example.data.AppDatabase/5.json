@@ -1,0 +1,141 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 5,
+    "identityHash": "placeholder_will_be_replaced_on_first_build",
+    "entities": [
+      {
+        "tableName": "accounts",
+        "createSql": "CREATE TABLE IF NOT EXISTS `accounts` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `platformName` TEXT NOT NULL, `accountName` TEXT NOT NULL, `isConnected` INTEGER NOT NULL, `avatarUrl` TEXT NOT NULL, `followerCount` INTEGER NOT NULL, `status` TEXT NOT NULL, `isProfessional` INTEGER NOT NULL)",
+        "fields": [
+          { "fieldPath": "id", "columnName": "id", "affinity": "INTEGER", "notNull": true },
+          { "fieldPath": "platformName", "columnName": "platformName", "affinity": "TEXT", "notNull": true },
+          { "fieldPath": "accountName", "columnName": "accountName", "affinity": "TEXT", "notNull": true },
+          { "fieldPath": "isConnected", "columnName": "isConnected", "affinity": "INTEGER", "notNull": true },
+          { "fieldPath": "avatarUrl", "columnName": "avatarUrl", "affinity": "TEXT", "notNull": true },
+          { "fieldPath": "followerCount", "columnName": "followerCount", "affinity": "INTEGER", "notNull": true },
+          { "fieldPath": "status", "columnName": "status", "affinity": "TEXT", "notNull": true },
+          { "fieldPath": "isProfessional", "columnName": "isProfessional", "affinity": "INTEGER", "notNull": true }
+        ],
+        "primaryKey": { "autoGenerate": true, "columnNames": ["id"] },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "posts",
+        "createSql": "CREATE TABLE IF NOT EXISTS `posts` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `contentText` TEXT NOT NULL, `mediaUrl` TEXT NOT NULL, `mediaType` TEXT NOT NULL, `platforms` TEXT NOT NULL, `status` TEXT NOT NULL, `scheduledTime` INTEGER NOT NULL, `qualityScore` INTEGER NOT NULL, `isAdapted` INTEGER NOT NULL, `adaptedContent` TEXT NOT NULL)",
+        "fields": [
+          { "fieldPath": "id", "columnName": "id", "affinity": "INTEGER", "notNull": true },
+          { "fieldPath": "contentText", "columnName": "contentText", "affinity": "TEXT", "notNull": true },
+          { "fieldPath": "mediaUrl", "columnName": "mediaUrl", "affinity": "TEXT", "notNull": true },
+          { "fieldPath": "mediaType", "columnName": "mediaType", "affinity": "TEXT", "notNull": true },
+          { "fieldPath": "platforms", "columnName": "platforms", "affinity": "TEXT", "notNull": true },
+          { "fieldPath": "status", "columnName": "status", "affinity": "TEXT", "notNull": true },
+          { "fieldPath": "scheduledTime", "columnName": "scheduledTime", "affinity": "INTEGER", "notNull": true },
+          { "fieldPath": "qualityScore", "columnName": "qualityScore", "affinity": "INTEGER", "notNull": true },
+          { "fieldPath": "isAdapted", "columnName": "isAdapted", "affinity": "INTEGER", "notNull": true },
+          { "fieldPath": "adaptedContent", "columnName": "adaptedContent", "affinity": "TEXT", "notNull": true }
+        ],
+        "primaryKey": { "autoGenerate": true, "columnNames": ["id"] },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "chat_messages",
+        "createSql": "CREATE TABLE IF NOT EXISTS `chat_messages` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `role` TEXT NOT NULL, `text` TEXT NOT NULL, `timestamp` INTEGER NOT NULL)",
+        "fields": [
+          { "fieldPath": "id", "columnName": "id", "affinity": "INTEGER", "notNull": true },
+          { "fieldPath": "role", "columnName": "role", "affinity": "TEXT", "notNull": true },
+          { "fieldPath": "text", "columnName": "text", "affinity": "TEXT", "notNull": true },
+          { "fieldPath": "timestamp", "columnName": "timestamp", "affinity": "INTEGER", "notNull": true }
+        ],
+        "primaryKey": { "autoGenerate": true, "columnNames": ["id"] },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "brand_kits",
+        "createSql": "CREATE TABLE IF NOT EXISTS `brand_kits` (`id` INTEGER PRIMARY KEY NOT NULL, `companyName` TEXT NOT NULL, `slogan` TEXT NOT NULL, `services` TEXT NOT NULL, `targetAudience` TEXT NOT NULL, `communicationStyle` TEXT NOT NULL, `primaryColorHex` TEXT NOT NULL, `secondaryColorHex` TEXT NOT NULL)",
+        "fields": [
+          { "fieldPath": "id", "columnName": "id", "affinity": "INTEGER", "notNull": true },
+          { "fieldPath": "companyName", "columnName": "companyName", "affinity": "TEXT", "notNull": true },
+          { "fieldPath": "slogan", "columnName": "slogan", "affinity": "TEXT", "notNull": true },
+          { "fieldPath": "services", "columnName": "services", "affinity": "TEXT", "notNull": true },
+          { "fieldPath": "targetAudience", "columnName": "targetAudience", "affinity": "TEXT", "notNull": true },
+          { "fieldPath": "communicationStyle", "columnName": "communicationStyle", "affinity": "TEXT", "notNull": true },
+          { "fieldPath": "primaryColorHex", "columnName": "primaryColorHex", "affinity": "TEXT", "notNull": true },
+          { "fieldPath": "secondaryColorHex", "columnName": "secondaryColorHex", "affinity": "TEXT", "notNull": true }
+        ],
+        "primaryKey": { "autoGenerate": false, "columnNames": ["id"] },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "media_items",
+        "createSql": "CREATE TABLE IF NOT EXISTS `media_items` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `title` TEXT NOT NULL, `mediaUrl` TEXT NOT NULL, `mediaType` TEXT NOT NULL, `category` TEXT NOT NULL, `isFavorite` INTEGER NOT NULL, `fileSize` TEXT NOT NULL, `timestamp` INTEGER NOT NULL)",
+        "fields": [
+          { "fieldPath": "id", "columnName": "id", "affinity": "INTEGER", "notNull": true },
+          { "fieldPath": "title", "columnName": "title", "affinity": "TEXT", "notNull": true },
+          { "fieldPath": "mediaUrl", "columnName": "mediaUrl", "affinity": "TEXT", "notNull": true },
+          { "fieldPath": "mediaType", "columnName": "mediaType", "affinity": "TEXT", "notNull": true },
+          { "fieldPath": "category", "columnName": "category", "affinity": "TEXT", "notNull": true },
+          { "fieldPath": "isFavorite", "columnName": "isFavorite", "affinity": "INTEGER", "notNull": true },
+          { "fieldPath": "fileSize", "columnName": "fileSize", "affinity": "TEXT", "notNull": true },
+          { "fieldPath": "timestamp", "columnName": "timestamp", "affinity": "INTEGER", "notNull": true }
+        ],
+        "primaryKey": { "autoGenerate": true, "columnNames": ["id"] },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "users",
+        "createSql": "CREATE TABLE IF NOT EXISTS `users` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `fullName` TEXT NOT NULL, `email` TEXT NOT NULL, `passwordHash` TEXT NOT NULL, `role` TEXT NOT NULL, `isGoogleConnected` INTEGER NOT NULL, `isEmailVerified` INTEGER NOT NULL, `verificationCode` TEXT NOT NULL)",
+        "fields": [
+          { "fieldPath": "id", "columnName": "id", "affinity": "INTEGER", "notNull": true },
+          { "fieldPath": "fullName", "columnName": "fullName", "affinity": "TEXT", "notNull": true },
+          { "fieldPath": "email", "columnName": "email", "affinity": "TEXT", "notNull": true },
+          { "fieldPath": "passwordHash", "columnName": "passwordHash", "affinity": "TEXT", "notNull": true },
+          { "fieldPath": "role", "columnName": "role", "affinity": "TEXT", "notNull": true },
+          { "fieldPath": "isGoogleConnected", "columnName": "isGoogleConnected", "affinity": "INTEGER", "notNull": true },
+          { "fieldPath": "isEmailVerified", "columnName": "isEmailVerified", "affinity": "INTEGER", "notNull": true },
+          { "fieldPath": "verificationCode", "columnName": "verificationCode", "affinity": "TEXT", "notNull": true }
+        ],
+        "primaryKey": { "autoGenerate": true, "columnNames": ["id"] },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "social_profiles",
+        "createSql": "CREATE TABLE IF NOT EXISTS `social_profiles` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `platformName` TEXT NOT NULL, `profileUrl` TEXT NOT NULL, `isActive` INTEGER NOT NULL)",
+        "fields": [
+          { "fieldPath": "id", "columnName": "id", "affinity": "INTEGER", "notNull": true },
+          { "fieldPath": "platformName", "columnName": "platformName", "affinity": "TEXT", "notNull": true },
+          { "fieldPath": "profileUrl", "columnName": "profileUrl", "affinity": "TEXT", "notNull": true },
+          { "fieldPath": "isActive", "columnName": "isActive", "affinity": "INTEGER", "notNull": true }
+        ],
+        "primaryKey": { "autoGenerate": true, "columnNames": ["id"] },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "authentication_logs",
+        "createSql": "CREATE TABLE IF NOT EXISTS `authentication_logs` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `email` TEXT NOT NULL, `actionType` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `details` TEXT NOT NULL)",
+        "fields": [
+          { "fieldPath": "id", "columnName": "id", "affinity": "INTEGER", "notNull": true },
+          { "fieldPath": "email", "columnName": "email", "affinity": "TEXT", "notNull": true },
+          { "fieldPath": "actionType", "columnName": "actionType", "affinity": "TEXT", "notNull": true },
+          { "fieldPath": "timestamp", "columnName": "timestamp", "affinity": "INTEGER", "notNull": true },
+          { "fieldPath": "details", "columnName": "details", "affinity": "TEXT", "notNull": true }
+        ],
+        "primaryKey": { "autoGenerate": true, "columnNames": ["id"] },
+        "indices": [],
+        "foreignKeys": []
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'placeholder_will_be_replaced_on_first_build')"
+    ]
+  }
+}
